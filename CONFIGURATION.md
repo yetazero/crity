@@ -1,6 +1,6 @@
 # Crity configuration reference
 
-Detailed settings panel guide, full command list, every configurable path and its valid range, HUD styles, target highlight, config file format and compatibility notes. Mod version 3.2.4, tested on Hytale 0.7.0-PRE-1.
+Settings, commands, and customization examples for Crity 3.2.4 on Hytale 0.7.0-PRE1.
 
 ## Settings panel
 
@@ -11,13 +11,11 @@ Run `/crity` to open the native Hytale settings window. `/crity help` lists the 
 - **Health HUD:** all positions, sizes, fonts, formats, colors, opacity and trail timings.
 - **Highlight:** enable glow or diagnostic bounds, change color/brightness/thickness and bounds limits.
 
-The right pane shows a game portrait, a damage sample, the health HUD sample, rule colors and current modes. Change the sample amount, ratio, cause or weapon to try your rules. The portrait is a static game image; this release does not embed an interactive 3D viewport or animate a spawned entity. Combat text animation and native glow need a combat check in the client. The portrait and preview never create world entities or change damage.
+The right pane shows a static game portrait, a damage sample, the health HUD sample, rule colors and current modes. Change the sample amount, ratio, cause or weapon to try your rules. Floating-text motion and target glow are visible during combat.
 
 **Place HUD** opens a full-screen sample at its actual size. Choose one of nine screen anchors, adjust horizontal/vertical sliders or type precise offsets, and use direction buttons for 1/8/32-unit nudges. **Move controls** switches the control panel between the top and bottom. **Back to settings** keeps the draft. Placement uses native controls, not mouse dragging of the bar.
 
 **Save changes** applies and persists the draft. **Defaults** resets its appearance to server defaults. **Reload saved** replaces the draft with current active settings. **Close** or Escape discards unsaved edits. Opening the panel and moving sliders do not write configuration files. If settings changed elsewhere while the panel was open, saving asks you to reload instead of silently overwriting them.
-
-Preview refreshes are coalesced to at most once every 80 ms while editing. Unchanged layout and palette entries are retained. An idle panel has no recurring animation task or update stream. Closing it cancels the pending refresh. Active panel/HUD/highlight registries use weak references so they do not keep unloaded worlds or disconnected players alive. Client rendering and FPS still need an in-game check; headless tests do not measure them.
 
 ## Quick start
 
@@ -42,6 +40,8 @@ Colors accept `RRGGBB` or `#RRGGBB` in commands; use `#RRGGBB` in JSON. A floati
 | `/crity help` | Modes and command help |
 | `/crity damage on\|default\|off` | Custom text, game text/colors, or hidden text |
 | `/crity health on\|default\|off` | Custom HUD, entity health bar, or hidden health |
+| `/crity highlight on\|off` | Enable/disable target glow |
+| `/crity hitboxes on\|off` | Enable/disable the selected glow or diagnostic bounds mode |
 | `/crity settings` | List all appearance values and rules in priority order |
 | `/crity set <path> <value>` | Change an appearance setting |
 | `/crity color <rule-id\|all> <hex>` | Recolor one rule or all damage |
@@ -135,7 +135,7 @@ At screen edges, positive offsets move inward. At horizontal/vertical center, po
 
 `/crity highlight on` enables a native model glow on your last successfully damaged target. Each hit refreshes it for `hud.durationMs`, even if the HUD is disabled. Switching targets removes your previous highlight. Turning it off, losing visibility, disconnecting or reaching the deadline removes it. The client also receives a finite effect lifetime. This is visual feedback for a confirmed hit; it does not promise that the next attack will land or change collision/damage rules.
 
-The effect is sent only to the attacker, with a dedicated Crity asset id. It does not add an effect component to the entity, change stats, clear other effects, replace item icons or save anything on the target. The native ModelVFX renderer provides a colored glow/sweep with a subtle tint; it is not a guarantee of Minecraft's exact silhouette or through-wall rendering. Client appearance still needs in-game validation.
+The highlight is visible only to the attacking player. It uses Hytale's native colored glow effect and does not change the target's stats.
 
 ```text
 /crity highlight on
@@ -169,26 +169,10 @@ Existing 2.9.x player modes are retained. On the first save, the old file is cop
 
 Missing appearance fields inherit server defaults. New players start with server defaults. Saved players have a complete appearance snapshot; use `/crity reset` to adopt changed server defaults. Use `/crity reload` after editing the file and before changing settings in game. Unknown visual keys are rejected to catch typos.
 
-## Compatibility and development
+## Compatibility and troubleshooting
 
-The `config` and `display` packages separate validation, rule matching and layout generation from Hytale calls. `compat` contains the registry replacement, optional feature guards and weapon metadata adapter. The HUD and command packages handle their respective Hytale APIs. No private-field reflection is used.
+Crity attempts to start on newer Hytale versions and handles integration failures per feature. When a guarded feature encounters an incompatible API, it is disabled and its error is logged while other compatible features remain available. A game update may still require a new Crity release.
 
-Crity does not reject new version numbers or revisions. The server manifest is logged for diagnostics. Each integration is checked where it is used: the settings panel checks its public API and shared UI styles; assets, commands, glow, diagnostic bounds and combat replacement each have separate failure guards. A missing feature logs an English explanation and leaves other compatible features available. `/crity help` remains the fallback if the graphical panel is unavailable and commands still work.
+Run `/crity diagnostics` to see which features are active and why any have been disabled. If the settings panel is unavailable, use `/crity help` for text commands.
 
-The replacement system is registered before removing stock combat text. Failed installation rolls back registration; shutdown restores stock text when the registry is alive. Missing stock registration leaves the registry alone. A custom combat display failure falls back to the stock handler on subsequent hits. HUD failures select the entity bar on subsequent hits. Native glow is visual only and has a finite lifetime. No custom components are serialized into world entities.
-
-`ServerVersion: "*"` allows compatible future builds to try starting the plugin. `IncludesAssetPack: false` keeps asset registration under the guarded runtime. Assets use Crity-specific IDs and do not replace item icons or the game's common UI files. Public-method checks and runtime guards cannot predict every client/protocol behavior change, but nothing Crity's own bootstrap does can prevent the world or any other mod from starting: plugin setup and start are wrapped in a catch-all boundary, so even a total, unanticipated failure there disables Crity's own integration and nothing else. An update can still be needed; there is no universal future-compatibility guarantee.
-
-Every Hytale call that could break on a future server update goes through a named `FeatureGate` (`compat/FeatureGate.kt`): a failure there disables only that one feature, logs its name and the exact exception, and leaves the rest of Crity, other mods and the world unaffected. `/crity diagnostics` reports the live status of every feature and, for any that are disabled, the exception that took it down - run it any time (not just at startup) and paste its output, or the matching `[Crity][diagnostic]` server log lines, when reporting a compatibility issue after a game update.
-
-Build with Gradle and a JDK capable of reading your server JAR (JDK 25+ for this build):
-
-```bash
-gradle --no-daemon build
-```
-
-Set `HYTALE_SERVER_JAR` or `-PhytaleServerJar=/path/to/HytaleServer.jar` to override the default Linux pre-release path. Output: `build/libs/Crity-3.2.4.jar`. Kotlin stdlib is bundled; the Hytale server JAR is not.
-
-`gradle check` includes the `checkCombat` executable checks: protocol serialization, one-label queuing, signed scatter, custom rules/priority, strict validation, configuration migration/backup, player isolation, layout command generation, native hitbox packet serialization and bounds, nearest-entity limits, registration rollback under injected failures, informational server build detection, finite additive glow packets, deadline refresh glow config migration, complete frontend field coverage, isolated settings drafts, UI event/packet serialization, critical-label and rule toggles, incremental preview updates and weak-session lifecycle. Layout command checks do not render the client UI. Check positions and styles in game at your usual UI scale before publishing.
-
-Install by replacing the old Crity JAR while the server/world is stopped. Keep only one Crity version in the mods directory. GitHub contains source code; JAR distribution is separate.
+When [reporting a problem](https://github.com/yetazero/crity/issues), include your Crity and Hytale versions, steps to reproduce it, and the diagnostics output or relevant `[Crity][diagnostic]` server log lines. For display problems, include a screenshot and your UI scale.
