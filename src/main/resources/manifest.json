@@ -1,0 +1,17 @@
+{
+  "Group": "yetazero",
+  "Name": "Crity",
+  "Version": "2.9.1",
+  "Description": "Dynamic combat damage tiers & non-destructive RPG Target Health Bar",
+  "Authors": [{ "Name": "yetazero" }],
+  "Website": "",
+  "DisabledByDefault": false,
+  "IncludesAssetPack": true,
+  "Dependencies": {
+    "Hytale:AssetModule": "*"
+  },
+  "OptionalDependencies": {},
+  "ServerVersion": "*",
+  "Main": "com.yetazero.crity.CrityPlugin",
+  "SubPlugins": []
+}
