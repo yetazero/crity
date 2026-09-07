@@ -1,63 +1,48 @@
-# Crity
+Crity — Dynamic Combat Damage & Target HUD
 
-Colored damage numbers and a target health HUD for **Hytale 0.7.0-PRE-1**.
+Current version: **3.2.4**, originally released for **Hytale 0.7.0-pre.1**.
 
-Mod version: **2.9.8**. Server version identifier: `0.7.0-pre.1`.
+Download JARs from [Releases](https://github.com/yetazero/crity/releases), or open
+[Actions](https://github.com/yetazero/crity/actions/workflows/build.yml) to download
+an automated build. See [BUILDING.md](BUILDING.md) for local builds and all three
+restored version tags.
 
-## Features
+Crity brings an immersive, modern combat experience to Hytale! It replaces static damage indicators with dynamic tiered floating numbers, critical hit popups, and introduces a clean, layered top-screen Target Health Bar with smooth phantom health drain.
 
-- Cyan, green, yellow and red damage tiers.
-- One floating label per damage event, including `CRIT! 42` for the highest tier.
-- Random horizontal spread with signed angles.
-- Target health HUD with a trailing damage indicator.
-- Per-player display settings and optional hit diagnostics.
+DISCLAIMER & NOTE I am not a professional developer! I create mods purely as a hobby and for fun. Because this mod hooks into internal damage events, custom UI pipelines, and game reflection systems, you might encounter occasional visual quirks or minor glitches. Feel free to experiment, test it out, and leave feedback in the comments!
 
-The CRIT label is based on a weapon damage-range heuristic. It does not represent
-an authoritative engine critical-hit flag. Separate damage events remain separate.
+FEATURES
 
-## Install
+Dynamic Damage Tiers & Critical Popups Damage numbers dynamically scale in color, size, and animation depending on how hard you hit relative to your weapon's damage range: • Cyan (< 25% weapon range): Light glancing blow. • Green (25% – 55% weapon range): Standard solid strike. • Yellow (55% – 80% weapon range): Heavy hit. • Red + CRIT! (≥ 80% weapon range): Massive critical hit with an additional explosive "CRIT!" popup!
 
-This repository contains source code only. Build `Crity-2.9.8.jar` using the
-instructions below and place it in your Hytale mods directory while the world/server
-is stopped. Replace the previous
-Crity JAR instead of keeping multiple versions, then restart the world/server.
+Layered Target Health Bar • Phantom Damage Trail: Instant red health bar drop with a smooth orange phantom trail that gracefully drains down. • Exact HP Numbers: Clear and precise numerical health readout (Current HP / Max HP). • Smart Auto-Hide: Automatically fades away after 5 seconds of combat inactivity. • Keeps entity heads clean by moving target health to an elegant top-centered HUD.
 
-The default Linux pre-release mods directory is:
+COMMANDS & CUSTOMIZATION
 
-```text
-~/.local/share/Hytale/data/pre-release/Mods/
-```
+Every player can independently configure their preferences. All settings are automatically saved and persist across server restarts!
 
-## Commands
+• /crity View your current display settings.
 
-| Command | Effect |
-| --- | --- |
-| `/crity` | Show current settings |
-| `/crity damage on` | Colored damage numbers |
-| `/crity damage default` | Standard white damage numbers |
-| `/crity damage off` | Hide damage numbers |
-| `/crity health on` | Target health HUD |
-| `/crity health default` | Standard entity health bar |
-| `/crity health off` | Hide health display |
-| `/crity debug on` | Log your damage events and outgoing text |
-| `/crity debug off` | Disable diagnostics |
+• /crity damage [on | default | off] Switch between Custom Tiers, Vanilla White, or Disabled.
 
-Settings are saved in `crity_players.json` in the server working directory.
-Diagnostics are disabled after a restart. Entity UI changes apply on the next hit;
-the custom target HUD is removed immediately when it is disabled.
+• /crity health [on | default | off] Switch between HUD, Vanilla 3D Bar, or Disabled.
 
-## Build
+---
 
-Requirements: JDK 25+. The Gradle wrapper downloads the pinned Hytale server API
-from the official Maven repository.
+## What's new in 3.2.4
 
-```bash
-./gradlew --no-daemon clean check jar
-```
+The description above is the original one from way back - keeping it here as-is, but the mod has grown a lot since then. Here's what actually changed:
 
-Output: `build/libs/Crity-2.9.8.jar`. The Gradle `checkCombat` task runs the standalone
-regression checks. Kotlin stdlib is bundled; the Hytale server JAR is not bundled.
+**A real settings panel.** Running `/crity` now opens a native in-game GUI instead of just printing text - buttons, sliders, dropdowns, a live preview pane, the works. `/crity help` still lists every text command if you'd rather not touch the GUI at all.
 
-GitHub Actions also builds downloadable JAR artifacts. See [BUILDING.md](BUILDING.md)
-for details and the restored version tags. The older shell scripts and
-[Russian build notes](README-BUILD.md) remain available for the local CLI workflow.
+**Custom color rules instead of 4 fixed tiers.** You're no longer stuck with cyan/green/yellow/red at fixed damage percentages. Add as many rules as you want (up to 64), each with its own color, custom text, and conditions (damage amount range, percent-of-weapon-range, damage cause, weapon ID prefix). Rules are checked top to bottom and the first match wins - reorder them however you like.
+
+**The HUD is fully customizable now**, not just top-centered: 9 screen anchors, adjustable size and offset, and five distinct visual styles (`classic`, `slim`, `text`, `bracket`, `segmented`). It can also run **vertically** instead of horizontally, and the fill direction can be **inverted** (drain toward the opposite edge) - all independent of which style you pick. Colors, fonts, opacity, the phantom trail timing/speed, all still configurable per player.
+
+**Target highlight and diagnostic hitboxes.** `/crity highlight on` gives your last hit target a native glow for a configurable duration. There's also a diagnostic bounding-box mode for debugging hit detection.
+
+**Export/import appearances.** `/crity export <name>` saves your current look to a shared, server-wide slot; `/crity import <name>` applies one back (yours or someone else's). `/crity exports` lists what's available.
+
+**It won't take the server down with it.** Every integration point with the base game goes through an isolated failure gate - if a future Hytale update breaks one specific feature (say, the settings panel), only that feature turns itself off; everything else in Crity, every other mod, and the world itself keep running normally. `/crity diagnostics` reports exactly what's active and, for anything that isn't, why - handy for bug reports.
+
+Full command list, every setting and its valid range, and more detail on all of the above: see [CONFIGURATION.md](CONFIGURATION.md) (or just run `/crity help` in game).

@@ -1,0 +1,25 @@
+$C = "../Common.ui";
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 46, Bottom: 3);
+  Label #Label {
+    Anchor: (Width: 200, Right: 12, Height: 38);
+    Style: (FontSize: 14, TextColor: #b7cedd, VerticalAlignment: Center, Wrap: true);
+    TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+  }
+  Group {
+    FlexWeight: 1;
+    Anchor: (Height: 38);
+    FloatSlider #Slider {
+      Anchor: (Left: 0, Right: 122, Top: 18, Height: 5);
+      Style: $C.@DefaultSliderStyle;
+      Min: 0;
+      Max: 1;
+      Step: 0.01;
+    }
+    $C.@NumberField #Input {
+      Anchor: (Right: 0, Width: 110, Height: 38);
+      Format: (MaxDecimalPlaces: 2, Step: 0.01);
+    }
+  }
+}

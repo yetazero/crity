@@ -1,62 +1,63 @@
 package com.yetazero.crity
 
-import com.yetazero.crity.command.CrityCommand
-import com.yetazero.crity.hud.CrityTargetHealthHud
-import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems
 import com.hypixel.hytale.server.core.plugin.JavaPlugin
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
+import com.yetazero.crity.compat.CrityDiagnostics
+import com.yetazero.crity.compat.CritySession
+import com.yetazero.crity.compat.ServerCompatibility
 import java.util.logging.Level
 import java.util.logging.Logger
 
 class CrityPlugin(init: JavaPluginInit) : JavaPlugin(init) {
-
-    companion object {
-        private val LOGGER = Logger.getLogger("Crity")
-    }
-
-    private var stockSystem: DamageSystems.EntityUIEvents? = null
+    private val log = Logger.getLogger("Crity")
+    private var session: CritySession? = null
 
     override fun setup() {
-        CrityState.loadConfig()
-        commandRegistry.registerCommand(CrityCommand())
+        guarded {
+            CrityDiagnostics.version = manifest.version.toString()
+            val build = try { ServerCompatibility.read(JavaPlugin::class.java) } catch (_: Exception) { null }
+            CrityDiagnostics.serverBuild = build
+            log.info(ServerCompatibility.describe(build))
+            val runtime = Class.forName("com.yetazero.crity.compat.CrityRuntime", true, javaClass.classLoader)
+                .getConstructor(JavaPlugin::class.java).newInstance(this) as CritySession
+            session = runtime
+            runtime.setup()
+        }
     }
 
     override fun start() {
-        val registry = EntityStore.REGISTRY
-        val stockClass = DamageSystems.EntityUIEvents::class.java
-        check(registry.hasSystemClass(stockClass)) {
-            "Crity cannot replace EntityUIEvents: the stock system is not registered. Check other combat UI mods."
-        }
-        val original = DamageSystems.EntityUIEvents()
-        registry.unregisterSystem(stockClass)
-        check(!registry.hasSystemClass(stockClass)) { "Crity failed to unregister EntityUIEvents" }
-        stockSystem = original
-        try {
-            entityStoreRegistry.registerSystem(CrityDamageSystem())
-        } catch (t: Throwable) {
-            registry.registerSystem(original)
-            stockSystem = null
-            throw t
-        }
-        LOGGER.log(Level.INFO, "Crity plugin v${manifest.version} (Kotlin) initialized. EntityUIEvents disabled (verified); one text packet per hit.")
+        guarded { session?.start() }
     }
 
     override fun shutdown() {
-        CrityState.saveConfig()
-        CrityTargetHealthHud.shutdownAll()
-        val registry = EntityStore.REGISTRY
-        stockSystem?.let { original ->
-            if (!registry.isShutdown) {
-                if (registry.hasSystemClass(CrityDamageSystem::class.java)) {
-                    registry.unregisterSystem(CrityDamageSystem::class.java)
-                }
-                if (!registry.hasSystemClass(DamageSystems.EntityUIEvents::class.java)) {
-                    registry.registerSystem(original)
-                }
-            }
+        closeSession()
+    }
+
+    private fun guarded(action: () -> Unit) {
+        try {
+            action()
+        } catch (error: Throwable) {
+            failed(error)
         }
-        stockSystem = null
-        super.shutdown()
+    }
+
+    private fun failed(error: Throwable) {
+        CrityDiagnostics.recordBootstrapFailure(error)
+        log.log(Level.WARNING, "[Crity][diagnostic] bootstrap FAILED: ${error.javaClass.name}: ${error.message}. " +
+            "Crity is shutting down its own integration; the world and every other mod are unaffected. " +
+            "Please install a compatible Crity update, or paste this line with the stack trace below when reporting the issue.", error)
+        closeSession()
+    }
+
+    private fun closeSession() {
+        val previous = session ?: return
+        session = null
+        try {
+            previous.close()
+        } catch (e: LinkageError) {
+            log.log(Level.WARNING, "Crity integration cleanup failed.", e)
+        } catch (e: Exception) {
+            log.log(Level.WARNING, "Crity integration cleanup failed.", e)
+        }
     }
 }

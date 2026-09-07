@@ -1,22 +1,20 @@
 package com.yetazero.crity
 
 import com.yetazero.crity.hud.CrityTargetHealthHud
+import com.yetazero.crity.compat.NativeTargetHighlight
+import com.yetazero.crity.compat.FeatureGate
+import com.yetazero.crity.compat.HytaleFeatures
+import com.yetazero.crity.compat.HytaleDamageMetadata
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause
 import com.hypixel.hytale.component.ArchetypeChunk
 import com.hypixel.hytale.component.CommandBuffer
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.SystemGroup
 import com.hypixel.hytale.component.query.Query
-import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.protocol.UIComponentsUpdate
-import com.hypixel.hytale.server.core.asset.type.item.config.Item
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemWeapon
-import com.hypixel.hytale.server.core.asset.type.item.config.damageData.DamageBreakdown
-import com.hypixel.hytale.server.core.asset.type.item.config.damageData.WeaponDamageDataCollector
 import com.hypixel.hytale.server.core.entity.entities.Player
-import com.hypixel.hytale.server.core.entity.entities.player.hud.HudManager
 import com.hypixel.hytale.server.core.inventory.InventoryComponent
-import com.hypixel.hytale.server.core.inventory.ItemStack
 import com.hypixel.hytale.server.core.modules.entity.EntityModule
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem
@@ -33,11 +31,15 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
 import java.util.logging.Level
 import java.util.logging.Logger
 
-class CrityDamageSystem : DamageEventSystem() {
+class CrityDamageSystem(private val stock: DamageEventSystem) : DamageEventSystem() {
 
     companion object {
         private val LOGGER = Logger.getLogger("Crity")
     }
+
+    private val weaponGate = FeatureGate("weapon damage metadata")
+    private val causeGate = FeatureGate("damage cause metadata")
+    private val displayGate = HytaleFeatures.combat
 
     private val query: Query<EntityStore> = Query.and(
         EntityModule.get().visibleComponentType,
@@ -49,6 +51,20 @@ class CrityDamageSystem : DamageEventSystem() {
     override fun getQuery(): Query<EntityStore> = query
 
     override fun handle(
+        index: Int,
+        chunk: ArchetypeChunk<EntityStore>,
+        store: Store<EntityStore>,
+        cmdBuf: CommandBuffer<EntityStore>,
+        damage: Damage
+    ) {
+        if (!displayGate.isEnabled) {
+            stock.handle(index, chunk, store, cmdBuf, damage)
+            return
+        }
+        displayGate.run { handleCustom(index, chunk, store, cmdBuf, damage) }
+    }
+
+    private fun handleCustom(
         index: Int,
         chunk: ArchetypeChunk<EntityStore>,
         store: Store<EntityStore>,
@@ -70,20 +86,36 @@ class CrityDamageSystem : DamageEventSystem() {
 
         val settings = CrityState.getSettings(playerRef.uuid)
         val targetRef = chunk.getReferenceTo(index)
+        HytaleFeatures.highlight.run { NativeTargetHighlight.hit(playerRef, viewer, targetRef) }
 
         val baseAngle = damage.getIfPresentMetaObject(Damage.HIT_ANGLE) ?: 0f
         val percent = if (settings.damageMode == CrityState.DamageMode.ON) {
-            resolveDamagePercent(cmdBuf, attackerRef, amount, damage)
+            weaponGate.run { HytaleDamageMetadata.resolveDamagePercent(cmdBuf, attackerRef, amount, damage) }
+                ?: if (amount >= damage.initialAmount.coerceAtLeast(1f) * 1.15f) 0.9f else 0.5f
         } else 0f
-        val angle = CrityCombatDisplay.angle(settings.damageMode, baseAngle)
-        val text = CrityCombatDisplay.text(settings.damageMode, amount, percent, angle)
+        val appearance = settings.visual.damage
+        val cause = causeGate.run { DamageCause.getAssetMap().getAsset(damage.damageCauseIndex) }
+        val weapon = if (appearance.rules.any { it.weaponPrefix.isNotEmpty() }) {
+            weaponGate.run { InventoryComponent.getItemInHand(cmdBuf, attackerRef)?.item?.id } ?: ""
+        } else ""
+        val angle = CrityCombatDisplay.angle(settings.damageMode, baseAngle, appearance = appearance)
+        val defaultColor = causeGate.run { cause?.resolveDamageTextColor() }
+        val text = CrityCombatDisplay.text(settings.damageMode, amount, percent, angle,
+            appearance, cause?.id ?: "", weapon, defaultColor)
+
+        if (settings.healthMode == CrityState.HealthMode.ON && player != null) {
+            HytaleFeatures.hud.run { updateTargetHealthHud(cmdBuf, targetRef, playerRef, player, amount) }
+        }
+        val effectiveHealthMode = if (settings.healthMode == CrityState.HealthMode.ON && !HytaleFeatures.hud.isEnabled)
+            CrityState.HealthMode.DEFAULT else settings.healthMode
 
         val map = EntityUIComponent.getAssetMap()
         val originalUi = cmdBuf.getComponent(targetRef, UIComponentList.getComponentType())
             ?.componentIds ?: intArrayOf()
-        val preferredId = if (settings.damageMode == CrityState.DamageMode.ON) "CrityCombat" else "CombatText"
+        val preferredId = if (settings.damageMode == CrityState.DamageMode.ON) appearance.template else "CombatText"
         val selectedIndex = if (text == null) null else {
-            map.getIndex(preferredId).takeIf { it >= 0 }
+            map.getIndex(preferredId).takeIf { it >= 0 && map.getAsset(it) is CombatTextUIComponent }
+                ?: map.getIndex("CrityCombat").takeIf { settings.damageMode == CrityState.DamageMode.ON && it >= 0 }
                 ?: map.getIndex("CombatText").takeIf { it >= 0 }
         }
         val activeUi = CrityCombatDisplay.components(
@@ -91,7 +123,7 @@ class CrityDamageSystem : DamageEventSystem() {
             { map.getAsset(it) is CombatTextUIComponent },
             selectedIndex,
             map.getIndex("Healthbar"),
-            settings.healthMode
+            effectiveHealthMode
         )
         viewer.queueUpdate(targetRef, UIComponentsUpdate(activeUi))
         if (text != null && selectedIndex != null) viewer.queueUpdate(targetRef, text)
@@ -106,60 +138,6 @@ class CrityDamageSystem : DamageEventSystem() {
                 "packets=${if (text != null && selectedIndex != null) 1 else 0} text=${text?.text}")
         }
 
-        if (settings.healthMode == CrityState.HealthMode.ON && player != null) {
-            updateTargetHealthHud(cmdBuf, targetRef, playerRef, player, amount)
-        }
-    }
-
-    private fun resolveDamagePercent(
-        cmdBuf: CommandBuffer<EntityStore>,
-        attackerRef: Ref<EntityStore>,
-        amount: Float,
-        damage: Damage
-    ): Float {
-        try {
-            val stack: ItemStack? = InventoryComponent.getItemInHand(cmdBuf, attackerRef)
-            val item: Item? = stack?.item
-            if (item != null) {
-                val weapon: ItemWeapon? = item.weapon
-                val allEntries = ArrayList<DamageBreakdown.Entry>()
-
-                weapon?.basicDamageBreakdown?.entries()?.let { allEntries.addAll(it) }
-                weapon?.ultimateDamageBreakdown?.entries()?.let { allEntries.addAll(it) }
-
-                if (allEntries.isEmpty()) {
-                    val calc = WeaponDamageDataCollector.calculate(item, InteractionType.Primary)
-                    allEntries.addAll(calc.entries())
-                }
-
-                var bestEntry: DamageBreakdown.Entry? = null
-                var minDistance = Float.MAX_VALUE
-
-                for (entry in allEntries) {
-                    val min = entry.min()
-                    val max = entry.max()
-                    if (amount >= (min - 0.5f) && amount <= (max + 0.5f)) {
-                        bestEntry = entry
-                        break
-                    }
-                    val center = (min + max) * 0.5f
-                    val dist = kotlin.math.abs(amount - center)
-                    if (dist < minDistance) {
-                        minDistance = dist
-                        bestEntry = entry
-                    }
-                }
-
-                if (bestEntry != null && bestEntry.max() > bestEntry.min()) {
-                    return ((amount - bestEntry.min()) / (bestEntry.max() - bestEntry.min())).coerceIn(0f, 1f)
-                }
-            }
-        } catch (t: Exception) {
-            LOGGER.log(Level.WARNING, "Crity: failed to resolve weapon damage breakdown", t)
-        }
-
-        val initial = damage.initialAmount.coerceAtLeast(1.0f)
-        return if (amount >= initial * 1.15f) 0.9f else 0.5f
     }
 
     private fun updateTargetHealthHud(
@@ -169,19 +147,13 @@ class CrityDamageSystem : DamageEventSystem() {
         player: Player,
         damageAmount: Float
     ) {
-        try {
-            val stats = cmdBuf.getComponent(targetRef, EntityStatMap.getComponentType()) ?: return
-            val healthIdx = DefaultEntityStatTypes.getHealth()
-            val statVal = stats.get(healthIdx) ?: return
-            val cur = statVal.get()
-            val max = statVal.max
+        val stats = cmdBuf.getComponent(targetRef, EntityStatMap.getComponentType()) ?: return
+        val healthIdx = DefaultEntityStatTypes.getHealth()
+        val statVal = stats.get(healthIdx) ?: return
+        val cur = statVal.get()
+        val max = statVal.max
 
-            val hudManager: HudManager = player.hudManager
-            val hud = (hudManager.getCustomHud(CrityTargetHealthHud.KEY) as? CrityTargetHealthHud)
-                ?: CrityTargetHealthHud(playerRef, player, targetRef.store.externalData.world).also { hudManager.addCustomHud(playerRef, it) }
-            hud.updateHealth(targetRef, cur, max, damageAmount)
-        } catch (t: Exception) {
-            LOGGER.log(Level.WARNING, "Crity: failed to update target health HUD", t)
-        }
+        val hud = CrityTargetHealthHud.getOrCreate(playerRef, player, targetRef.store.externalData.world)
+        hud.updateHealth(targetRef, cur, max, damageAmount)
     }
 }

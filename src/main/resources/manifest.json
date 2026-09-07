@@ -1,8 +1,8 @@
 {
   "Group": "yetazero",
   "Name": "Crity",
-  "Version": "2.9.8",
-  "Description": "Colored damage numbers and target health HUD",
+  "Version": "3.2.4",
+  "Description": "Native combat appearance settings, customizable damage text, target HUD and highlight",
   "Authors": [
     {
       "Name": "yetazero"
@@ -10,13 +10,13 @@
   ],
   "Website": "",
   "DisabledByDefault": false,
-  "IncludesAssetPack": true,
-  "Dependencies": {
+  "IncludesAssetPack": false,
+  "Dependencies": {},
+  "OptionalDependencies": {
     "Hytale:AssetModule": "*",
     "Hytale:DamageModule": "*"
   },
-  "OptionalDependencies": {},
-  "ServerVersion": "0.7.0-pre.1",
+  "ServerVersion": "*",
   "Main": "com.yetazero.crity.CrityPlugin",
   "SubPlugins": []
 }

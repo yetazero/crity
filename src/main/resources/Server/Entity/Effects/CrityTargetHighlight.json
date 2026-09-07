@@ -1,0 +1,7 @@
+{
+  "Duration": 5.0,
+  "OverlapBehavior": "Overwrite",
+  "ApplicationEffects": {
+    "ModelVFXId": "CrityTargetHighlight"
+  }
+}

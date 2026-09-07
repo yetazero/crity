@@ -1,0 +1,11 @@
+$C = "../Common.ui";
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 46, Bottom: 3);
+  Label #Label {
+    Anchor: (Width: 200, Right: 12, Height: 38);
+    Style: (FontSize: 14, TextColor: #b7cedd, VerticalAlignment: Center, Wrap: true);
+    TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+  }
+  $C.@CheckBox #Input { Anchor: (Width: 22, Height: 22, Top: 8); }
+}

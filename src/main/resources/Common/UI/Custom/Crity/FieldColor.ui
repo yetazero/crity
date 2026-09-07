@@ -1,0 +1,15 @@
+$C = "../Common.ui";
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 46, Bottom: 3);
+  Label #Label {
+    Anchor: (Width: 200, Right: 12, Height: 38);
+    Style: (FontSize: 14, TextColor: #b7cedd, VerticalAlignment: Center, Wrap: true);
+    TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+  }
+  Group #Swatch {
+    Anchor: (Width: 32, Height: 32, Top: 3, Right: 12);
+    Background: #ffffff;
+  }
+  $C.@TextField #Input { Anchor: (Height: 38); FlexWeight: 1; }
+}

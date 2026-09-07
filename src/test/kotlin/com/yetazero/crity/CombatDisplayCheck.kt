@@ -97,10 +97,15 @@ fun main() {
         Files.writeString(path, "{broken")
         check(runCatching { config.load() }.isFailure)
         check(Files.readString(path) == "{broken")
-        Files.list(directory).use { check(it.count() == 1L) }
+        Files.list(directory).use { check(it.count() == 2L) }
     } finally {
         Files.deleteIfExists(directory.resolve("settings.json"))
+        Files.deleteIfExists(directory.resolve("settings.json.v1.bak"))
         Files.delete(directory)
     }
     println("PASS: display modes, protocol, queue, 4096 random angles, signed protocol angles, config parsing and atomic replacement")
+    checkAppearance()
+    checkHitboxes()
+    checkTargetHighlight()
+    checkSettingsPanel()
 }

@@ -1,0 +1,141 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay #Overlay {}
+$C.@DecoratedContainer #Window {
+  Anchor: (Width: 1100, Height: 720);
+  #Title {
+    $C.@Title { @Text = "CRITY"; }
+  }
+  #Content {
+    LayoutMode: Top;
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 48, Bottom: 8);
+      $C.@SecondaryTextButton #DamageTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Damage"; }
+      $C.@SecondaryTextButton #RulesTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Color rules"; }
+      $C.@SecondaryTextButton #HudTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Health HUD"; }
+      $C.@SecondaryTextButton #HighlightTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Highlight"; }
+      Group { FlexWeight: 1; }
+      $C.@TextButton #EditHud { @Anchor = Anchor(Width: 160); Text: "Place HUD"; }
+    }
+    Group {
+      FlexWeight: 1;
+      LayoutMode: Left;
+      Group {
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Anchor: (Right: 18);
+        Label #SectionTitle { Anchor: (Height: 28); Style: (FontSize: 19, TextColor: #e9d8ab, RenderBold: true); }
+        Label #SectionHint { Anchor: (Height: 44, Bottom: 8); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+        Group #RuleTools {
+          Visible: false;
+          LayoutMode: Top;
+          Anchor: (Height: 100);
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 40, Bottom: 6);
+            $C.@DropdownBox #RuleList { Anchor: (Height: 32, Top: 4, Right: 8); FlexWeight: 1; }
+            $C.@SmallSecondaryTextButton #RuleUp { @Anchor = Anchor(Width: 64, Right: 6, Top: 4); Text: "Up"; }
+            $C.@SmallSecondaryTextButton #RuleDown { @Anchor = Anchor(Width: 82, Right: 6, Top: 4); Text: "Down"; }
+            $C.@SmallSecondaryTextButton #RuleDelete { @Anchor = Anchor(Width: 100, Top: 4); Text: "Delete"; }
+          }
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 44, Bottom: 10);
+            $C.@TextField #NewRuleId { Anchor: (Height: 38, Top: 3, Right: 8); FlexWeight: 1; PlaceholderText: "New rule ID (optional)"; }
+            $C.@SecondaryTextButton #RuleAdd { @Anchor = Anchor(Width: 145); Text: "Add rule"; }
+          }
+        }
+        Group #Fields {
+          FlexWeight: 1;
+          LayoutMode: TopScrolling;
+          ScrollbarStyle: $C.@DefaultScrollbarStyle;
+          Padding: (Right: 10);
+        }
+      }
+      Group {
+        Anchor: (Width: 340);
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Padding: (Right: 8);
+        Label { Text: "PREVIEW"; Anchor: (Height: 28); Style: (FontSize: 15, TextColor: #e9d8ab, RenderBold: true); }
+        Group {
+          Anchor: (Height: 195, Bottom: 8);
+          Background: (TexturePath: "../Common/ContainerPanelPatch.png", Border: 4);
+          AssetImage #Portrait {
+            Anchor: (Width: 144, Height: 144, Top: 40);
+            AssetPath: "Icons/ModelsGenerated/Trork_Warrior.png";
+            FallbackTexturePath: "UI/Custom/Pages/Memories/MissingIcon.png";
+          }
+          Label #SampleDamage {
+            Anchor: (Left: 8, Right: 8, Top: 6, Height: 42);
+            Style: (FontSize: 27, TextColor: #ff5555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          }
+          Group #HighlightSwatch { Anchor: (Left: 12, Bottom: 12, Width: 14, Height: 14); Background: #d7e3eb; }
+          Label #HighlightState { Anchor: (Left: 34, Right: 8, Bottom: 10, Height: 18); Style: (FontSize: 11, TextColor: #96a9be); }
+        }
+        Group #MiniHud { Anchor: (Height: 95, Bottom: 4); }
+        Label #PreviewSummary { Anchor: (Height: 62, Bottom: 8); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+        $C.@DropdownBox #PortraitChoice {
+          Anchor: (Height: 32, Bottom: 12);
+          Value: "Trork_Warrior";
+          DropdownEntry { Value: "Trork_Warrior"; Text: "Trork"; }
+          DropdownEntry { Value: "Kweebec_Sapling"; Text: "Kweebec"; }
+          DropdownEntry { Value: "Kweebec_Rootling"; Text: "Rootling"; }
+        }
+        Label { Text: "COLOR SAMPLES"; Anchor: (Height: 24); Style: (FontSize: 12, TextColor: #e9d8ab, RenderBold: true); }
+        Group #Palette { LayoutMode: Top; Anchor: (Bottom: 12); }
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 44);
+          Label { Text: "Sample damage"; Anchor: (Width: 155, Height: 38); Style: (FontSize: 13, TextColor: #96a9be, VerticalAlignment: Center); }
+          $C.@NumberField #SampleAmount { @Anchor = Anchor(Width: 155); Value: 42; Format: (MinValue: 0.1, MaxValue: 1000000, MaxDecimalPlaces: 2, Step: 1); }
+        }
+        Label #RatioLabel { Text: "Damage ratio: 90%"; Anchor: (Height: 25); Style: (FontSize: 13, TextColor: #96a9be); }
+        FloatSlider #SampleRatio { Anchor: (Left: 8, Right: 8, Height: 5, Bottom: 22); Style: $C.@DefaultSliderStyle; Min: 0; Max: 1; Step: 0.01; Value: 0.9; }
+        $C.@TextField #SampleCause { @Anchor = Anchor(Bottom: 8); PlaceholderText: "Sample cause (optional)"; }
+        $C.@TextField #SampleWeapon { @Anchor = Anchor(Bottom: 8); PlaceholderText: "Sample weapon ID (optional)"; }
+        Label { Text: "Samples use your draft. Save applies changes to combat."; Anchor: (Height: 42); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+      }
+    }
+    Label #Status { Anchor: (Height: 30, Top: 8); Style: (FontSize: 13, TextColor: #b7cedd, VerticalAlignment: Center); Text: "Your settings. Changes stay in this panel until saved."; }
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 44);
+      $C.@SecondaryTextButton #Reset { @Anchor = Anchor(Width: 140, Right: 8); Text: "Defaults"; }
+      $C.@SecondaryTextButton #Reload { @Anchor = Anchor(Width: 165); Text: "Reload saved"; }
+      Group { FlexWeight: 1; }
+      $C.@TextButton #Save { @Anchor = Anchor(Width: 185, Right: 8); Text: "Save changes"; Disabled: true; }
+      $C.@SecondaryTextButton #Close { @Anchor = Anchor(Width: 115); Text: "Close"; }
+    }
+  }
+}
+Group #Editor {
+  Visible: false;
+  Group #FullHud { HitTestVisible: false; }
+  $C.@Container #MovePanel {
+    Anchor: (Width: 710, Height: 310, Bottom: 35);
+    #Title { $C.@Title { @Text = "PLACE YOUR HUD"; } }
+    #Content {
+      LayoutMode: Top;
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 48);
+        $C.@DropdownBox #EditAnchor { Anchor: (Height: 32, Top: 6, Right: 8); FlexWeight: 1; }
+        $C.@SecondaryTextButton #Step { @Anchor = Anchor(Width: 110, Right: 8); Text: "Step: 8"; TooltipText: "How far Left/Right/Up/Down move the HUD per click, in UI units. Click to cycle 1, 8, 32."; }
+        $C.@SecondaryTextButton #Dock { @Anchor = Anchor(Width: 215); Text: "Move controls"; }
+      }
+      Group #EditFields { LayoutMode: Top; Anchor: (Height: 104); }
+      Label #EditStatus { Text: "Offsets are relative to your screen anchor."; Anchor: (Height: 24); Style: (FontSize: 12, TextColor: #b7cedd); }
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 44);
+        $C.@SecondaryTextButton #MoveLeft { @Anchor = Anchor(Width: 90, Right: 5); Text: "Left"; }
+        $C.@SecondaryTextButton #MoveUp { @Anchor = Anchor(Width: 90, Right: 5); Text: "Up"; }
+        $C.@SecondaryTextButton #MoveDown { @Anchor = Anchor(Width: 90, Right: 5); Text: "Down"; }
+        $C.@SecondaryTextButton #MoveRight { @Anchor = Anchor(Width: 90, Right: 10); Text: "Right"; }
+        $C.@TextButton #EditorBack { @Anchor = Anchor(Width: 230); Text: "Back to settings"; }
+      }
+    }
+  }
+}
