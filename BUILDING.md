@@ -7,6 +7,16 @@ Open **Actions → Build Crity** and select a successful run. Download the
 Pushes to `main`, version tags, and pull requests run the existing regression
 checks and build the JAR. **Run workflow** also starts a build manually.
 
+## Publishing a release JAR
+
+Create and push a version tag, then create a **draft Release** for that tag.
+Open **Actions → Publish release JAR → Run workflow**, leave the workflow branch
+as `main`, and enter the release tag. The workflow checks out that exact tag,
+runs its checks, builds its JAR, uploads it to the release, and publishes the
+draft. Re-running replaces the JAR attached to the same release. This requires
+a tagged version with the Gradle wrapper and portable build configuration;
+the restored source-only `Crity0.6.0` tag cannot use this workflow.
+
 ## Local build
 
 Install JDK 25 or newer, then run:
