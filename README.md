@@ -1,34 +1,63 @@
-Crity — Dynamic Combat Damage & Target HUD
+# Crity
 
-Crity brings an immersive, modern combat experience to Hytale! It replaces static damage indicators with dynamic tiered floating numbers, critical hit popups, and introduces a clean, layered top-screen Target Health Bar with smooth phantom health drain.
+Colored damage numbers and a target health HUD for **Hytale 0.7.0-PRE-1**.
 
-DISCLAIMER & NOTE
-I am not a professional developer! I create mods purely as a hobby and for fun. Because this mod hooks into internal damage events, custom UI pipelines, and game reflection systems, you might encounter occasional visual quirks or minor glitches. Feel free to experiment, test it out, and leave feedback in the comments!
+Mod version: **2.9.8**. Server version identifier: `0.7.0-pre.1`.
 
-FEATURES
+## Features
 
-Dynamic Damage Tiers & Critical Popups
-Damage numbers dynamically scale in color, size, and animation depending on how hard you hit relative to your weapon's damage range:
-• Cyan (< 25% weapon range): Light glancing blow.
-• Green (25% – 55% weapon range): Standard solid strike.
-• Yellow (55% – 80% weapon range): Heavy hit.
-• Red + CRIT! (≥ 80% weapon range): Massive critical hit with an additional explosive "CRIT!" popup!
+- Cyan, green, yellow and red damage tiers.
+- One floating label per damage event, including `CRIT! 42` for the highest tier.
+- Random horizontal spread with signed angles.
+- Target health HUD with a trailing damage indicator.
+- Per-player display settings and optional hit diagnostics.
 
-Layered Target Health Bar
-• Phantom Damage Trail: Instant red health bar drop with a smooth orange phantom trail that gracefully drains down.
-• Exact HP Numbers: Clear and precise numerical health readout (Current HP / Max HP).
-• Smart Auto-Hide: Automatically fades away after 5 seconds of combat inactivity.
-• Keeps entity heads clean by moving target health to an elegant top-centered HUD.
+The CRIT label is based on a weapon damage-range heuristic. It does not represent
+an authoritative engine critical-hit flag. Separate damage events remain separate.
 
-COMMANDS & CUSTOMIZATION
+## Install
 
-Every player can independently configure their preferences. All settings are automatically saved and persist across server restarts!
+This repository contains source code only. Build `Crity-2.9.8.jar` using the
+instructions below and place it in your Hytale mods directory while the world/server
+is stopped. Replace the previous
+Crity JAR instead of keeping multiple versions, then restart the world/server.
 
-• /crity
-View your current display settings.
+The default Linux pre-release mods directory is:
 
-• /crity damage [on | default | off]
-Switch between Custom Tiers, Vanilla White, or Disabled.
+```text
+~/.local/share/Hytale/data/pre-release/Mods/
+```
 
-• /crity health [on | default | off]
-Switch between HUD, Vanilla 3D Bar, or Disabled.
+## Commands
+
+| Command | Effect |
+| --- | --- |
+| `/crity` | Show current settings |
+| `/crity damage on` | Colored damage numbers |
+| `/crity damage default` | Standard white damage numbers |
+| `/crity damage off` | Hide damage numbers |
+| `/crity health on` | Target health HUD |
+| `/crity health default` | Standard entity health bar |
+| `/crity health off` | Hide health display |
+| `/crity debug on` | Log your damage events and outgoing text |
+| `/crity debug off` | Disable diagnostics |
+
+Settings are saved in `crity_players.json` in the server working directory.
+Diagnostics are disabled after a restart. Entity UI changes apply on the next hit;
+the custom target HUD is removed immediately when it is disabled.
+
+## Build
+
+Requirements: JDK 25+. The Gradle wrapper downloads the pinned Hytale server API
+from the official Maven repository.
+
+```bash
+./gradlew --no-daemon clean check jar
+```
+
+Output: `build/libs/Crity-2.9.8.jar`. The Gradle `checkCombat` task runs the standalone
+regression checks. Kotlin stdlib is bundled; the Hytale server JAR is not bundled.
+
+GitHub Actions also builds downloadable JAR artifacts. See [BUILDING.md](BUILDING.md)
+for details and the restored version tags. The older shell scripts and
+[Russian build notes](README-BUILD.md) remain available for the local CLI workflow.

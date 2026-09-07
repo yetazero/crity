@@ -1,0 +1,16 @@
+build/
+target/
+.gradle/
+.kotlin/
+.idea/
+*.iml
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.zip
+*.tar.gz
+crity_players.json
+crity_players-*.tmp
+logs/
+Logs/
+.env
+.env.*

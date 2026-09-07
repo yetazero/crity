@@ -1,109 +1,93 @@
 package com.yetazero.crity
 
-import java.io.File
-import java.util.Scanner
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption.ATOMIC_MOVE
+import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
 
 object CrityState {
-
-    private val LOGGER = Logger.getLogger("Crity")
+    private val logger = Logger.getLogger("Crity")
+    private val playerSettings = ConcurrentHashMap<UUID, PlayerSettings>()
+    private val config = CrityConfigStore(Path.of("crity_players.json"))
 
     enum class DamageMode { ON, DEFAULT, OFF }
     enum class HealthMode { ON, DEFAULT, OFF }
 
     data class PlayerSettings(
-        var damageMode: DamageMode = DamageMode.ON,
-        var healthMode: HealthMode = HealthMode.ON
+        @Volatile var damageMode: DamageMode = DamageMode.ON,
+        @Volatile var healthMode: HealthMode = HealthMode.ON,
+        @Volatile var debugDamage: Boolean = false
     )
 
-    private val playerSettings = ConcurrentHashMap<UUID, PlayerSettings>()
-    private val configFile = File("crity_players.json")
-
-    fun getSettings(uuid: UUID?): PlayerSettings {
-        if (uuid == null) return PlayerSettings()
-        return playerSettings.computeIfAbsent(uuid) { PlayerSettings() }
-    }
-
-    fun removeSettings(uuid: UUID?) {
-        if (uuid != null) playerSettings.remove(uuid)
-    }
-
-    fun trackedPlayerCount(): Int = playerSettings.size
+    fun getSettings(uuid: UUID): PlayerSettings = playerSettings.computeIfAbsent(uuid) { PlayerSettings() }
 
     @Synchronized
     fun saveConfig() {
         try {
-            configFile.bufferedWriter().use { writer ->
-                writer.append("{\n")
-                val entries = playerSettings.entries.toList()
-                entries.forEachIndexed { i, entry ->
-                    val (uuid, settings) = entry
-                    writer.append("  \"").append(uuid.toString()).append("\": {")
-                        .append("\"damage\": \"").append(settings.damageMode.name).append("\", ")
-                        .append("\"health\": \"").append(settings.healthMode.name).append("\"}")
-                    if (i != entries.lastIndex) writer.append(",")
-                    writer.append("\n")
-                }
-                writer.append("}\n")
-            }
+            config.save(playerSettings)
         } catch (e: Exception) {
-            LOGGER.log(Level.WARNING, "Failed to save Crity config", e)
+            logger.log(Level.WARNING, "Failed to save Crity config", e)
         }
     }
 
     @Synchronized
     fun loadConfig() {
-        if (!configFile.exists()) return
         try {
-            Scanner(configFile).use { scanner ->
-                while (scanner.hasNextLine()) {
-                    val line = scanner.nextLine().trim()
-                    if (!line.startsWith("\"") || !line.contains(": {")) continue
-
-                    val uuidEnd = line.indexOf("\"", 1)
-                    if (uuidEnd <= 1) continue
-                    val uuidStr = line.substring(1, uuidEnd)
-                    val uuid = try {
-                        UUID.fromString(uuidStr)
-                    } catch (e: IllegalArgumentException) {
-                        continue
-                    }
-                    val settings = getSettings(uuid)
-
-                    extractField(line, "damage")?.let { value ->
-                        try {
-                            settings.damageMode = DamageMode.valueOf(value)
-                        } catch (e: IllegalArgumentException) {}
-                    }
-                    extractField(line, "health")?.let { value ->
-                        try {
-                            settings.healthMode = HealthMode.valueOf(value)
-                        } catch (e: IllegalArgumentException) {}
-                    }
-                }
-            }
+            val loaded = config.load()
+            playerSettings.clear()
+            playerSettings.putAll(loaded)
         } catch (e: Exception) {
-            LOGGER.log(Level.WARNING, "Failed to load Crity config", e)
+            logger.log(Level.WARNING, "Failed to load Crity config", e)
+        }
+    }
+}
+
+internal class CrityConfigStore(private val path: Path) {
+    fun load(): Map<UUID, CrityState.PlayerSettings> {
+        if (!Files.exists(path)) return emptyMap()
+        val root = Files.newBufferedReader(path).use { JsonParser.parseReader(it).asJsonObject }
+        return buildMap {
+            for ((key, value) in root.entrySet()) {
+                val uuid = runCatching { UUID.fromString(key) }.getOrNull() ?: continue
+                if (!value.isJsonObject) continue
+                val entry = value.asJsonObject
+                val damage = runCatching { CrityState.DamageMode.valueOf(entry["damage"].asString) }
+                    .getOrDefault(CrityState.DamageMode.ON)
+                val health = runCatching { CrityState.HealthMode.valueOf(entry["health"].asString) }
+                    .getOrDefault(CrityState.HealthMode.ON)
+                put(uuid, CrityState.PlayerSettings(damage, health))
+            }
         }
     }
 
-    private fun extractField(line: String, field: String): String? {
-        val marker = "\"$field\": \""
-        val start = line.indexOf(marker)
-        if (start < 0) return null
-        val valueStart = start + marker.length
-        val valueEnd = line.indexOf("\"", valueStart)
-        if (valueEnd <= valueStart) return null
-        return line.substring(valueStart, valueEnd)
+    fun save(settings: Map<UUID, CrityState.PlayerSettings>) {
+        val root = JsonObject()
+        for ((uuid, value) in settings.entries.sortedBy { it.key.toString() }) {
+            val entry = JsonObject()
+            entry.addProperty("damage", value.damageMode.name)
+            entry.addProperty("health", value.healthMode.name)
+            root.add(uuid.toString(), entry)
+        }
+        val target = path.toAbsolutePath()
+        Files.createDirectories(target.parent)
+        val temporary = Files.createTempFile(target.parent, "crity_players-", ".tmp")
+        try {
+            Files.newBufferedWriter(temporary).use { GsonBuilder().setPrettyPrinting().create().toJson(root, it) }
+            try {
+                Files.move(temporary, target, ATOMIC_MOVE, REPLACE_EXISTING)
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(temporary, target, REPLACE_EXISTING)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
     }
-
-    const val UI_CYAN = "CrityCyan"
-    const val UI_GREEN = "CrityGreen"
-    const val UI_YELLOW = "CrityYellow"
-    const val UI_RED = "CrityRed"
-    const val UI_HEALTHBAR = "Healthbar"
-    const val UI_COMBAT_TEXT = "CombatText"
 }

@@ -1,100 +1,119 @@
 package com.yetazero.crity.hud
 
+import com.yetazero.crity.CrityState
 import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.server.core.entity.entities.Player
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud
-import com.hypixel.hytale.server.core.entity.entities.player.hud.HudManager
 import com.hypixel.hytale.server.core.ui.Anchor
 import com.hypixel.hytale.server.core.ui.Value
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder
 import com.hypixel.hytale.server.core.universe.PlayerRef
+import com.hypixel.hytale.server.core.universe.world.World
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 import java.util.logging.Logger
 
 class CrityTargetHealthHud(
     playerRef: PlayerRef,
-    private val player: Player
+    private val player: Player,
+    private val world: World
 ) : CustomUIHud(playerRef, KEY) {
-
     companion object {
         const val KEY = "CrityTargetHealth"
-        const val BAR_WIDTH = 404
+        private const val BAR_WIDTH = 404
         private val LOGGER = Logger.getLogger("Crity")
+        private val active = ConcurrentHashMap.newKeySet<CrityTargetHealthHud>()
 
-        private val EXECUTOR: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
-            ThreadFactory { r -> Thread(r, "Crity-HudManager").apply { isDaemon = true } }
-        )
-
-        fun shutdownExecutor() {
-            EXECUTOR.shutdownNow()
+        fun shutdownAll() {
+            for (hud in active.toList()) {
+                hud.onRemove()
+                if (hud.world.isAlive) {
+                    try {
+                        hud.world.execute { hud.remove() }
+                    } catch (e: IllegalStateException) {
+                        LOGGER.log(Level.FINE, "Crity HUD world already stopped", e)
+                    }
+                }
+            }
         }
     }
 
     private var currentTargetRef: Ref<EntityStore>? = null
-    @Volatile private var currentPct: Float = 1.0f
-    @Volatile private var phantomPct: Float = 1.0f
-    @Volatile private var healthText: String = "100 / 100"
-    @Volatile private var lastHitTime: Long = System.currentTimeMillis()
+    private var currentPct = 1f
+    private var phantomPct = 1f
+    private var healthText = "100 / 100"
+    private var lastHitNanos = 0L
+    private var generation = 0L
+    @Volatile private var closed = false
+    @Volatile private var task: ScheduledFuture<*>? = null
 
-    private var drainTask: ScheduledFuture<*>? = null
-    private var autoCloseTask: ScheduledFuture<*>? = null
-
-    @Synchronized
     fun updateHealth(targetRef: Ref<EntityStore>, current: Float, max: Float, damageAmount: Float) {
-        val safeMax = max.coerceAtLeast(1.0f)
-        val newPct = (current / safeMax).coerceIn(0.0f, 1.0f)
-        val oldPct = ((current + damageAmount) / safeMax).coerceIn(0.0f, 1.0f)
-
-        val isNewTarget = currentTargetRef == null || currentTargetRef != targetRef || isExpired()
+        if (closed || !current.isFinite() || !max.isFinite() || max <= 0f) return
+        val visibleHealth = current.coerceIn(0f, max)
+        val newPct = visibleHealth / max
+        val oldPct = ((current + damageAmount) / max).coerceIn(0f, 1f)
+        val now = System.nanoTime()
+        val isNewTarget = currentTargetRef != targetRef || now - lastHitNanos >= TimeUnit.SECONDS.toNanos(5)
         currentTargetRef = targetRef
-
         phantomPct = if (isNewTarget) oldPct else maxOf(phantomPct, oldPct)
         currentPct = newPct
-        healthText = "${Math.ceil(current.toDouble()).toInt()} / ${Math.ceil(max.toDouble()).toInt()}"
-        lastHitTime = System.currentTimeMillis()
-
-        drainTask?.cancel(false)
-        autoCloseTask?.cancel(false)
-
+        healthText = "${kotlin.math.ceil(visibleHealth).toInt()} / ${kotlin.math.ceil(max).toInt()}"
+        lastHitNanos = now
+        generation++
+        task?.cancel(false)
+        active.add(this)
         pushBarUpdate()
-
-        drainTask = EXECUTOR.scheduleWithFixedDelay({
-            try {
-                val now = System.currentTimeMillis()
-                if (now - lastHitTime < 450L) return@scheduleWithFixedDelay
-
-                if (phantomPct > currentPct + 0.003f) {
-                    phantomPct += (currentPct - phantomPct) * 0.15f
-                    pushBarUpdate()
-                } else {
-                    phantomPct = currentPct
-                    pushBarUpdate()
-                    drainTask?.cancel(false)
-                }
-            } catch (t: Throwable) {
-                LOGGER.log(Level.WARNING, "Crity drain task failed", t)
-                drainTask?.cancel(false)
-            }
-        }, 450L, 30L, TimeUnit.MILLISECONDS)
-
-        autoCloseTask = EXECUTOR.schedule({
-            try {
-                drainTask?.cancel(false)
-                val hudManager: HudManager? = player.hudManager
-                hudManager?.removeCustomHud(playerRef, KEY)
-            } catch (t: Throwable) {
-                LOGGER.log(Level.WARNING, "Crity auto-close task failed", t)
-            }
-        }, 5000L, TimeUnit.MILLISECONDS)
+        scheduleTick(generation, 450L)
     }
 
-    fun isExpired(): Boolean = (System.currentTimeMillis() - lastHitTime) > 5000L
+    private fun scheduleTick(expectedGeneration: Long, delayMillis: Long) {
+        if (!closed) {
+            task = world.scheduleAfter({ tick(expectedGeneration) }, delayMillis, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    private fun tick(expectedGeneration: Long) {
+        if (closed || generation != expectedGeneration) return
+        val ref = playerRef.reference
+        if (ref == null || !ref.isValid || ref.store.externalData.world !== world ||
+            player.hudManager.getCustomHud(KEY) !== this) {
+            onRemove()
+            return
+        }
+        try {
+            val elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - lastHitNanos)
+            if (elapsed >= 5000L || CrityState.getSettings(playerRef.uuid).healthMode != CrityState.HealthMode.ON) {
+                remove()
+                return
+            }
+            if (elapsed >= 450L && phantomPct > currentPct) {
+                phantomPct = if (phantomPct > currentPct + 0.003f) {
+                    phantomPct + (currentPct - phantomPct) * 0.15f
+                } else currentPct
+                pushBarUpdate()
+            }
+            scheduleTick(expectedGeneration, 30L)
+        } catch (e: Exception) {
+            onRemove()
+            LOGGER.log(Level.WARNING, "Crity HUD update failed", e)
+        }
+    }
+
+    private fun remove() {
+        if (player.hudManager.getCustomHud(KEY) === this) {
+            player.hudManager.removeCustomHud(playerRef, KEY)
+        } else onRemove()
+    }
+
+    override fun onRemove() {
+        closed = true
+        task?.cancel(false)
+        active.remove(this)
+        super.onRemove()
+    }
 
     private fun pushBarUpdate() {
         try {
@@ -121,7 +140,7 @@ class CrityTargetHealthHud(
             builder.setObject("#PhantomFill.Anchor", phantomAnchor)
             builder.set("#HealthText.Text", healthText)
             update(false, builder)
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
             LOGGER.log(Level.WARNING, "Crity HUD push failed", t)
         }
     }

@@ -1,17 +1,22 @@
 {
   "Group": "yetazero",
   "Name": "Crity",
-  "Version": "2.9.1",
-  "Description": "Dynamic combat damage tiers & non-destructive RPG Target Health Bar",
-  "Authors": [{ "Name": "yetazero" }],
+  "Version": "2.9.8",
+  "Description": "Colored damage numbers and target health HUD",
+  "Authors": [
+    {
+      "Name": "yetazero"
+    }
+  ],
   "Website": "",
   "DisabledByDefault": false,
   "IncludesAssetPack": true,
   "Dependencies": {
-    "Hytale:AssetModule": "*"
+    "Hytale:AssetModule": "*",
+    "Hytale:DamageModule": "*"
   },
   "OptionalDependencies": {},
-  "ServerVersion": "*",
+  "ServerVersion": "0.7.0-pre.1",
   "Main": "com.yetazero.crity.CrityPlugin",
   "SubPlugins": []
 }

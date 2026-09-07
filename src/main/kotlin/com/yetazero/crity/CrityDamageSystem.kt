@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref
 import com.hypixel.hytale.component.Store
 import com.hypixel.hytale.component.SystemGroup
 import com.hypixel.hytale.component.query.Query
-import com.hypixel.hytale.protocol.CombatTextUpdate
 import com.hypixel.hytale.protocol.InteractionType
 import com.hypixel.hytale.protocol.UIComponentsUpdate
 import com.hypixel.hytale.server.core.asset.type.item.config.Item
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes
 import com.hypixel.hytale.server.core.modules.entityui.EntityUIModule
 import com.hypixel.hytale.server.core.modules.entityui.UIComponentList
+import com.hypixel.hytale.server.core.modules.entityui.asset.CombatTextUIComponent
 import com.hypixel.hytale.server.core.modules.entityui.asset.EntityUIComponent
 import com.hypixel.hytale.server.core.universe.PlayerRef
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore
@@ -37,30 +37,6 @@ class CrityDamageSystem : DamageEventSystem() {
 
     companion object {
         private val LOGGER = Logger.getLogger("Crity")
-
-        var healthBarIdx = -1; private set
-        var defaultCombatTextIdx = -1; private set
-        var cyanIdx = -1; private set
-        var greenIdx = -1; private set
-        var yellowIdx = -1; private set
-        var redIdx = -1; private set
-
-        fun ensureIndicesLoaded(): Boolean {
-            if (cyanIdx >= 0 && greenIdx >= 0 && yellowIdx >= 0 && redIdx >= 0) return true
-            return try {
-                val map = EntityUIComponent.getAssetMap() ?: return false
-                healthBarIdx = map.getIndex(CrityState.UI_HEALTHBAR)
-                defaultCombatTextIdx = map.getIndex(CrityState.UI_COMBAT_TEXT)
-                cyanIdx = map.getIndex(CrityState.UI_CYAN)
-                greenIdx = map.getIndex(CrityState.UI_GREEN)
-                yellowIdx = map.getIndex(CrityState.UI_YELLOW)
-                redIdx = map.getIndex(CrityState.UI_RED)
-                (cyanIdx >= 0 && greenIdx >= 0 && yellowIdx >= 0 && redIdx >= 0)
-            } catch (t: Throwable) {
-                LOGGER.log(Level.FINE, "Crity: asset map not fully initialized yet", t)
-                false
-            }
-        }
     }
 
     private val query: Query<EntityStore> = Query.and(
@@ -80,7 +56,7 @@ class CrityDamageSystem : DamageEventSystem() {
         damage: Damage
     ) {
         val amount = damage.amount
-        if (amount <= 0f) return
+        if (damage.isCancelled || !amount.isFinite() || amount <= 0f) return
 
         val source = damage.source as? Damage.EntitySource ?: return
         val attackerRef = source.ref
@@ -95,60 +71,39 @@ class CrityDamageSystem : DamageEventSystem() {
         val settings = CrityState.getSettings(playerRef.uuid)
         val targetRef = chunk.getReferenceTo(index)
 
-        val angleVal = damage.getIfPresentMetaObject(Damage.HIT_ANGLE) ?: 0f
-        val damageText = amount.toInt().toString()
+        val baseAngle = damage.getIfPresentMetaObject(Damage.HIT_ANGLE) ?: 0f
+        val percent = if (settings.damageMode == CrityState.DamageMode.ON) {
+            resolveDamagePercent(cmdBuf, attackerRef, amount, damage)
+        } else 0f
+        val angle = CrityCombatDisplay.angle(settings.damageMode, baseAngle)
+        val text = CrityCombatDisplay.text(settings.damageMode, amount, percent, angle)
 
-        ensureIndicesLoaded()
-
-        val activeUiSet = HashSet<Int>()
-        try {
-            val targetUiList = cmdBuf.getComponent(targetRef, UIComponentList.getComponentType())
-            targetUiList?.componentIds?.let { activeUiSet.addAll(it.toList()) }
-        } catch (t: Throwable) {
-            LOGGER.log(Level.WARNING, "Crity: failed to read target UI list", t)
+        val map = EntityUIComponent.getAssetMap()
+        val originalUi = cmdBuf.getComponent(targetRef, UIComponentList.getComponentType())
+            ?.componentIds ?: intArrayOf()
+        val preferredId = if (settings.damageMode == CrityState.DamageMode.ON) "CrityCombat" else "CombatText"
+        val selectedIndex = if (text == null) null else {
+            map.getIndex(preferredId).takeIf { it >= 0 }
+                ?: map.getIndex("CombatText").takeIf { it >= 0 }
         }
+        val activeUi = CrityCombatDisplay.components(
+            originalUi,
+            { map.getAsset(it) is CombatTextUIComponent },
+            selectedIndex,
+            map.getIndex("Healthbar"),
+            settings.healthMode
+        )
+        viewer.queueUpdate(targetRef, UIComponentsUpdate(activeUi))
+        if (text != null && selectedIndex != null) viewer.queueUpdate(targetRef, text)
 
-        listOf(defaultCombatTextIdx, cyanIdx, greenIdx, yellowIdx, redIdx)
-            .filter { it >= 0 }
-            .forEach { activeUiSet.remove(it) }
-
-        if (healthBarIdx >= 0) {
-            when (settings.healthMode) {
-                CrityState.HealthMode.OFF, CrityState.HealthMode.ON -> activeUiSet.remove(healthBarIdx)
-                CrityState.HealthMode.DEFAULT -> activeUiSet.add(healthBarIdx)
-            }
-        }
-
-        when (settings.damageMode) {
-            CrityState.DamageMode.DEFAULT -> {
-                if (defaultCombatTextIdx >= 0) activeUiSet.add(defaultCombatTextIdx)
-                viewer.queueUpdate(targetRef, UIComponentsUpdate(activeUiSet.toIntArray()))
-                viewer.queueUpdate(targetRef, CombatTextUpdate(angleVal, damageText))
-            }
-
-            CrityState.DamageMode.ON -> {
-                val pct = resolveDamagePercent(cmdBuf, attackerRef, amount, damage)
-                val isCrit = pct >= 0.80f
-                val chosenColorIdx = when {
-                    isCrit -> redIdx
-                    pct >= 0.55f -> yellowIdx
-                    pct >= 0.25f -> greenIdx
-                    else -> cyanIdx
-                }
-                if (chosenColorIdx >= 0) activeUiSet.add(chosenColorIdx)
-
-                viewer.queueUpdate(targetRef, UIComponentsUpdate(activeUiSet.toIntArray()))
-                viewer.queueUpdate(targetRef, CombatTextUpdate(angleVal, damageText))
-                if (isCrit) {
-                    viewer.queueUpdate(targetRef, CombatTextUpdate(angleVal + 180f, "CRIT!"))
-                }
-            }
-
-            CrityState.DamageMode.OFF -> {
-                if (activeUiSet.isNotEmpty()) {
-                    viewer.queueUpdate(targetRef, UIComponentsUpdate(activeUiSet.toIntArray()))
-                }
-            }
+        if (settings.debugDamage) {
+            LOGGER.log(Level.INFO, "Crity DEBUG hit event=${System.identityHashCode(damage)} " +
+                "time=${System.nanoTime()} target=${targetRef.index} attacker=${attackerRef.index} " +
+                "amount=$amount initial=${damage.initialAmount} cause=${damage.damageCauseIndex} " +
+                "percent=$percent baseAngle=$baseAngle angle=${text?.hitAngleDeg} " +
+                "uiBefore=${originalUi.joinToString { map.getAsset(it)?.id ?: it.toString() }} " +
+                "uiAfter=${activeUi.joinToString { map.getAsset(it)?.id ?: it.toString() }} " +
+                "packets=${if (text != null && selectedIndex != null) 1 else 0} text=${text?.text}")
         }
 
         if (settings.healthMode == CrityState.HealthMode.ON && player != null) {
@@ -199,7 +154,7 @@ class CrityDamageSystem : DamageEventSystem() {
                     return ((amount - bestEntry.min()) / (bestEntry.max() - bestEntry.min())).coerceIn(0f, 1f)
                 }
             }
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
             LOGGER.log(Level.WARNING, "Crity: failed to resolve weapon damage breakdown", t)
         }
 
@@ -223,9 +178,9 @@ class CrityDamageSystem : DamageEventSystem() {
 
             val hudManager: HudManager = player.hudManager
             val hud = (hudManager.getCustomHud(CrityTargetHealthHud.KEY) as? CrityTargetHealthHud)
-                ?: CrityTargetHealthHud(playerRef, player).also { hudManager.addCustomHud(playerRef, it) }
+                ?: CrityTargetHealthHud(playerRef, player, targetRef.store.externalData.world).also { hudManager.addCustomHud(playerRef, it) }
             hud.updateHealth(targetRef, cur, max, damageAmount)
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
             LOGGER.log(Level.WARNING, "Crity: failed to update target health HUD", t)
         }
     }
