@@ -12,8 +12,10 @@ internal object HytaleFeatures {
     val highlight = FeatureGate("native target highlight")
     val hud = FeatureGate("target health HUD")
     val hitboxes = FeatureGate("diagnostic bounds display")
+    val reticle = FeatureGate("custom reticle")
+    val reticleWeapons = FeatureGate("reticle weapon selection")
 
-    val all: List<FeatureGate> get() = listOf(commands, assets, combat, settings, highlight, hud, hitboxes)
+    val all: List<FeatureGate> get() = listOf(commands, assets, combat, settings, highlight, hud, hitboxes, reticle, reticleWeapons)
 }
 
 internal class FeatureGate(private val name: String) {

@@ -17,6 +17,7 @@ internal class CrityRuntime(private val plugin: JavaPlugin) : CritySession {
     private var command: CommandRegistration? = null
     private var ownsPack = false
     private var ownsTick = false
+    private var ownsReticleTick = false
     private var started = false
     private val packId = "yetazero:Crity"
 
@@ -45,6 +46,10 @@ internal class CrityRuntime(private val plugin: JavaPlugin) : CritySession {
             ownsTick = true
         }
         HytaleFeatures.commands.run { command = plugin.commandRegistry.registerCommand(CrityCommand()) }
+        HytaleFeatures.reticle.run {
+            plugin.entityStoreRegistry.registerSystem(CrityReticleSystem())
+            ownsReticleTick = true
+        }
         HytaleFeatures.combat.run {
             val adapter = HytaleIntegration()
             integration = adapter
@@ -61,6 +66,15 @@ internal class CrityRuntime(private val plugin: JavaPlugin) : CritySession {
             { com.yetazero.crity.ui.CritySettingsPage.shutdownAll() },
             { NativeTargetHighlight.shutdownAll() },
             { CrityTargetHealthHud.shutdownAll() },
+            { com.yetazero.crity.hud.CrityReticleHud.shutdownAll() },
+            {
+                val registry = EntityStore.REGISTRY
+                if (ownsReticleTick && !registry.isShutdown && registry.hasSystemClass(CrityReticleSystem::class.java)) {
+                    registry.unregisterSystem(CrityReticleSystem::class.java)
+                }
+                ownsReticleTick = false
+                com.yetazero.crity.display.ReticleLayout.clear()
+            },
             { integration?.close(); integration = null },
             {
                 val registry = EntityStore.REGISTRY

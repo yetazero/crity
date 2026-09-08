@@ -77,7 +77,7 @@ internal class SettingsDraft(initial: SettingsSnapshot) {
         "debugDamage" -> current.debug.toString()
         else -> {
             val keys = path.split('.')
-            VisualSettingsCodec.encode(current.visual).getAsJsonObject(keys[0])[keys[1]].asString
+            keys.fold(VisualSettingsCodec.encode(current.visual) as com.google.gson.JsonElement) { value, key -> value.asJsonObject[key] }.asString
         }
     }
 

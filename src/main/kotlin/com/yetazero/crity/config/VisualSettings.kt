@@ -148,12 +148,14 @@ data class HitboxAppearance(
 data class VisualSettings(
     val damage: DamageAppearance = DamageAppearance(),
     val hud: HudAppearance = HudAppearance(),
-    val hitboxes: HitboxAppearance = HitboxAppearance()
+    val hitboxes: HitboxAppearance = HitboxAppearance(),
+    val reticle: ReticleAppearance = ReticleAppearance()
 ) {
     fun validate() {
         damage.validate()
         hud.validate()
         hitboxes.validate()
+        reticle.validate()
     }
 }
 

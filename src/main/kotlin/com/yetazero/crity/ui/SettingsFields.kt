@@ -4,6 +4,9 @@ import com.yetazero.crity.config.HudOrientation
 import com.yetazero.crity.config.HudPosition
 import com.yetazero.crity.config.HudStyle
 import com.yetazero.crity.config.TargetDisplayMode
+import com.yetazero.crity.config.ReticleShape
+import com.yetazero.crity.config.ReticleCenter
+import com.yetazero.crity.config.ReticleMode
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -102,6 +105,38 @@ internal object SettingsFields {
         text("cause", "Damage cause", "Leave empty to match every cause."),
         text("weaponPrefix", "Weapon ID prefix", "Leave empty to match every weapon.")
     )
-    val all = modes + damage + hud + highlight
+    private val reticleCommon = listOf(
+        toggle("reticle.enabled", "Custom reticle"),
+        choice("reticle.mode", "Profile selection", ReticleMode.entries.map { it.name })
+    )
+    private fun reticleProfile(prefix: String) = listOf(
+        toggle("$prefix.enabled", "Use custom profile"),
+        choice("$prefix.shape", "Shape", ReticleShape.entries.map { it.name }),
+        color("$prefix.color", "Shape color"),
+        color("$prefix.outlineColor", "Outline color"),
+        color("$prefix.centerColor", "Center color"),
+        number("$prefix.size", "Shape radius / dot size", 4, 40),
+        number("$prefix.armLength", "Arm / corner length", 2, 32),
+        number("$prefix.gap", "Arm / ring gap", 0, 24),
+        number("$prefix.thickness", "Line thickness", 1, 8),
+        number("$prefix.outlineWidth", "Outline thickness", 0, 4),
+        toggle("$prefix.roundEnds", "Rounded line ends"),
+        toggle("$prefix.showCenter", "Show center"),
+        choice("$prefix.centerShape", "Center shape", ReticleCenter.entries.map { it.name }),
+        number("$prefix.centerSize", "Center size", 1, 12),
+        number("$prefix.opacity", "Shape opacity", 0, 1, 0.01),
+        number("$prefix.outlineOpacity", "Outline opacity", 0, 1, 0.01),
+        number("$prefix.centerOpacity", "Center opacity", 0, 1, 0.01),
+        number("$prefix.rotation", "Rotation", 0, 359),
+        number("$prefix.stretchX", "Horizontal scale (%)", 50, 150),
+        number("$prefix.stretchY", "Vertical scale (%)", 50, 150),
+        number("$prefix.offsetX", "Horizontal offset", -24, 24),
+        number("$prefix.offsetY", "Vertical offset", -24, 24)
+    )
+    private val melee = reticleProfile("reticle.melee")
+    private val ranged = reticleProfile("reticle.ranged")
+    val reticle = reticleCommon + melee + ranged
+    fun reticleFor(isRanged: Boolean) = reticleCommon + if (isRanged) ranged else melee
+    val all = modes + damage + hud + highlight + reticle
     val byPath = all.associateBy { it.path }
 }

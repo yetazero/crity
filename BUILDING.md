@@ -27,6 +27,11 @@ configuration validation and migration, HUD layouts, settings events, target
 highlighting, and integration failure handling. Client rendering, animation,
 and performance require in-game testing.
 
+Reticle checks cover profile independence, configuration migration, all 16 shapes,
+continuous contours, geometry bounds and preview updates. Set
+`CRITY_RETICLE_PREVIEW_DIR` to export PNG samples and native UI layouts while
+running `checkCombat`. No game assets are needed for reticle generation.
+
 ## Use a local server API
 
 ```bash

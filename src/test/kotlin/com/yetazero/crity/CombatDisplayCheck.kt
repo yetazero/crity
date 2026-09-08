@@ -108,4 +108,5 @@ fun main() {
     checkHitboxes()
     checkTargetHighlight()
     checkSettingsPanel()
+    checkReticle()
 }

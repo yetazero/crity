@@ -50,18 +50,22 @@ internal fun checkClientCommands(builder: UICommandBuilder) {
 }
 
 internal fun checkSettingsUiContracts(original: SettingsSnapshot) {
+    checkUiTemplateParameterOrder()
     val baseline = original.copy(visual = original.visual.copy(damage = original.visual.damage.copy(minAngle = -180f, maxAngle = 180f)))
     var states = 0
     fun render(draft: SettingsDraft, selected: String? = draft.current.visual.damage.rules.firstOrNull()?.id) {
-        for (tab in SettingsTab.entries) {
+        for ((tab, ranged) in SettingsTab.entries.flatMap { tab -> (if (tab == SettingsTab.RETICLE) listOf(false, true) else listOf(false)).map { tab to it } }) {
             val commands = UICommandBuilder()
             val events = UIEventBuilder()
-            SettingsPanelRenderer.fields(draft, tab, selected, 1, commands, events)
+            SettingsPanelRenderer.fields(draft, tab, selected, 1, commands, events, ranged)
             checkClientCommands(commands)
+            val hudTools = commands.commands.single { it.selector == "#HudTools.Visible" }
+            check(BsonDocument.parse(hudTools.data).getBoolean("0").value == (tab == SettingsTab.HUD))
             val fields = when (tab) {
                 SettingsTab.DAMAGE -> SettingsFields.modes + SettingsFields.damage
                 SettingsTab.HUD -> SettingsFields.hud
                 SettingsTab.HIGHLIGHT -> SettingsFields.highlight
+                SettingsTab.RETICLE -> SettingsFields.reticleFor(ranged)
                 SettingsTab.RULES -> if (selected == null) emptyList() else SettingsFields.rule
             }
             fields.forEachIndexed { index, field ->
@@ -162,4 +166,39 @@ internal fun checkSettingsUiContracts(original: SettingsSnapshot) {
         check(runCatching { SettingsField("unsafe", "Unsafe", FieldKind.NUMBER, max = invalid) }.isFailure)
     }
     println("PASS: $states settings states across all tabs, typed field/event bindings, Decimal-safe limits and updates, huge/empty damage bounds, invalid input rollback, empty/full rules and preview commands")
+}
+
+private fun checkUiTemplateParameterOrder() {
+    data class Block(val parentheses: Int, var bodyStarted: Boolean = false)
+    fun validate(text: String, name: String) {
+        val blocks = mutableListOf<Block>()
+        var parentheses = 0
+        val tokens = Regex(""""(?:\\.|[^"\\])*"|@[A-Za-z_]\w*\s*=|[{}():]""")
+        for (match in tokens.findAll(text)) {
+            val token = match.value
+            val block = blocks.lastOrNull()
+            when (token) {
+                "(" -> parentheses++
+                ")" -> parentheses--
+                "{" -> {
+                    if (block != null && parentheses == block.parentheses) block.bodyStarted = true
+                    blocks.add(Block(parentheses))
+                }
+                "}" -> { check(blocks.isNotEmpty()); blocks.removeAt(blocks.lastIndex) }
+                ":" -> if (block != null && parentheses == block.parentheses) block.bodyStarted = true
+                else -> if (token.startsWith('@') && block != null && parentheses == block.parentheses) {
+                    check(!block.bodyStarted) {
+                        "$name:${text.take(match.range.first).count { it == '\n' } + 1}: template parameters must precede properties and children"
+                    }
+                }
+            }
+        }
+        check(blocks.isEmpty() && parentheses == 0) { "$name: unbalanced UI delimiters" }
+    }
+    check(runCatching { validate("Button { Text: \"Preview\"; @Anchor = Anchor(Height: 36); }", "regression") }.isFailure)
+    validate("Button { @Anchor = Anchor(Height: 36); @Text = \"Preview\"; Disabled: true; }", "valid")
+    java.nio.file.Files.walk(java.nio.file.Path.of("src/main/resources/Common/UI/Custom/Crity")).use { paths ->
+        paths.filter { it.toString().endsWith(".ui") }.forEach { validate(java.nio.file.Files.readString(it), it.toString()) }
+    }
+    println("PASS: UI template parameters precede properties and children in every Crity document")
 }

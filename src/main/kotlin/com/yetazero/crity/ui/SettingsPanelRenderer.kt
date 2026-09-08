@@ -15,12 +15,13 @@ import com.yetazero.crity.config.HudStyle
 import com.yetazero.crity.display.DamageContext
 import com.yetazero.crity.display.DamageFormatter
 import com.yetazero.crity.display.HealthHudLayout
+import com.yetazero.crity.display.ReticleLayout
 import java.util.Locale
 import kotlin.math.ceil
 
-internal enum class SettingsTab { DAMAGE, RULES, HUD, HIGHLIGHT }
+internal enum class SettingsTab { DAMAGE, RULES, HUD, HIGHLIGHT, RETICLE }
 
-internal data class PreviewState(val settings: SettingsSnapshot, val sample: DamageContext, val fullScreen: Boolean)
+internal data class PreviewState(val settings: SettingsSnapshot, val sample: DamageContext, val fullScreen: Boolean, val reticle: Boolean = false)
 
 internal object SettingsPanelRenderer {
     fun entries(values: List<String>) = values.map {
@@ -38,20 +39,28 @@ internal object SettingsPanelRenderer {
     }
 
     fun fields(draft: SettingsDraft, tab: SettingsTab, selected: String?, epoch: Int,
-               commands: UICommandBuilder, events: UIEventBuilder) {
+               commands: UICommandBuilder, events: UIEventBuilder, editRangedReticle: Boolean = false) {
         commands.clear("#Fields")
         commands.set("#RuleTools.Visible", tab == SettingsTab.RULES)
+        commands.set("#HudTools.Visible", tab == SettingsTab.HUD)
+        commands.set("#ReticlePreviewPanel.Visible", tab == SettingsTab.RETICLE)
+        commands.set("#CombatPreview.Visible", tab != SettingsTab.RETICLE)
+        commands.set("#ReticleProfileTools.Visible", tab == SettingsTab.RETICLE)
+        commands.set("#ReticleMelee.Disabled", !editRangedReticle)
+        commands.set("#ReticleRanged.Disabled", editRangedReticle)
         commands.set("#SectionTitle.Text", when (tab) {
             SettingsTab.DAMAGE -> "Damage numbers"
             SettingsTab.RULES -> "Colors and custom text"
             SettingsTab.HUD -> "Your target health HUD"
             SettingsTab.HIGHLIGHT -> "Target highlight"
+            SettingsTab.RETICLE -> if (editRangedReticle) "Ranged reticle" else "Melee reticle"
         })
         commands.set("#SectionHint.Text", when (tab) {
             SettingsTab.DAMAGE -> "Choose custom, vanilla or hidden numbers. Color rules override the fallback color and text."
             SettingsTab.RULES -> "The first matching rule wins. Add your own colors and text, then move rules to change their priority."
             SettingsTab.HUD -> "Choose a style and colors. Place HUD opens a full-screen preview at its actual size."
             SettingsTab.HIGHLIGHT -> "Glow marks your last confirmed hit for the HUD duration. Bounds are diagnostic boxes; they do not guarantee a hit."
+            SettingsTab.RETICLE -> "Edit each profile independently. Both previews use your draft. AUTO switches with weapon tags; MELEE and RANGED lock a profile."
         })
         if (tab == SettingsTab.RULES) {
             val rules = draft.current.visual.damage.rules
@@ -73,6 +82,7 @@ internal object SettingsPanelRenderer {
                 SettingsTab.DAMAGE -> SettingsFields.modes + SettingsFields.damage
                 SettingsTab.HUD -> SettingsFields.hud
                 SettingsTab.HIGHLIGHT -> SettingsFields.highlight
+                SettingsTab.RETICLE -> SettingsFields.reticleFor(editRangedReticle)
             }
             fields.forEachIndexed { index, field ->
                 row(commands, events, "#Fields", index, field, draft.value(field.path), "field", field.path, epoch)
@@ -134,8 +144,19 @@ internal object SettingsPanelRenderer {
         }
     }
 
-    fun preview(draft: SettingsDraft, sample: DamageContext, fullScreen: Boolean, commands: UICommandBuilder, previous: PreviewState? = null): PreviewState {
+    fun preview(draft: SettingsDraft, sample: DamageContext, fullScreen: Boolean, commands: UICommandBuilder, before: PreviewState? = null, reticle: Boolean = false): PreviewState {
+        val previous = before?.takeIf { it.reticle == (reticle && !fullScreen) }
         val visual = draft.current.visual
+        if (reticle && !fullScreen) {
+            val before = previous?.takeIf { it.reticle && !it.fullScreen }?.settings?.visual?.reticle
+            for ((selector, profile, old) in listOf(
+                Triple("#MeleeReticlePreview", visual.reticle.melee, before?.melee),
+                Triple("#RangedReticlePreview", visual.reticle.ranged, before?.ranged))) {
+                if (profile != old) commands.clear(selector).appendInline(selector, ReticleLayout.build(profile))
+            }
+            commands.set("#ReticlePreviewNote.Text", if (!visual.reticle.enabled) "Custom reticle is off. These previews show your saved or draft designs." else "Both profiles are shown at their actual UI size. Save changes to apply.")
+            return PreviewState(draft.current, sample, fullScreen, true)
+        }
         val label = when (draft.current.damage) {
             CrityState.DamageMode.OFF -> null
             CrityState.DamageMode.ON -> DamageFormatter.format(sample, visual.damage)

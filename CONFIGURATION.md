@@ -1,6 +1,6 @@
 # Crity configuration reference
 
-Settings, commands, and customization examples for Crity 3.2.4 on Hytale 0.7.0-PRE1.
+Settings, commands, and customization examples for Crity 3.4.2 on Hytale 0.7.0-PRE1.
 
 ## Settings panel
 
@@ -9,13 +9,62 @@ Run `/crity` to open the native Hytale settings window. `/crity help` lists the 
 - **Damage:** display modes, fallback color/text, decimal places, random spread and animation asset. **Show critical text** hides the `critical` rule's text without deleting its custom format or color.
 - **Color rules:** select a rule, type any `#RRGGBB` color into its field (a swatch next to it previews the color live), edit its text, enable/disable it, set damage/cause/weapon conditions, and move it up/down. Add a named rule or leave the ID empty for an automatic name. Minimum and maximum damage use text inputs with server-side numeric validation and support scientific notation. An empty minimum means zero; an empty maximum means unlimited. An empty cause/weapon matches everything.
 - **Health HUD:** all positions, sizes, fonts, formats, colors, opacity and trail timings.
+- **Reticle:** edit separate melee and ranged profiles with two dedicated reticle previews. Choose a shape and customize its geometry, center marker, colors, outline and position.
 - **Highlight:** enable glow or diagnostic bounds, change color/brightness/thickness and bounds limits.
 
 The right pane shows a static game portrait, a damage sample, the health HUD sample, rule colors and current modes. Change the sample amount, ratio, cause or weapon to try your rules. Floating-text motion and target glow are visible during combat.
 
-**Place HUD** opens a full-screen sample at its actual size. Choose one of nine screen anchors, adjust horizontal/vertical sliders or type precise offsets, and use direction buttons for 1/8/32-unit nudges. **Move controls** switches the control panel between the top and bottom. **Back to settings** keeps the draft. Placement uses native controls, not mouse dragging of the bar.
+**Place HUD**, in the **Health HUD** tab, opens a full-screen sample at its actual size. Choose one of nine screen anchors, adjust horizontal/vertical sliders or type precise offsets, and use direction buttons for 1/8/32-unit nudges. **Move controls** switches the control panel between the top and bottom. **Back to settings** keeps the draft. Placement uses native controls, not mouse dragging of the bar.
 
 **Save changes** applies and persists the draft. **Defaults** resets its appearance to server defaults. **Reload saved** replaces the draft with current active settings. **Close** or Escape discards unsaved edits. Opening the panel and moving sliders do not write configuration files. If settings changed elsewhere while the panel was open, saving asks you to reload instead of silently overwriting them.
+
+## Custom reticles
+
+Open **Reticle**, enable **Custom reticle**, then choose **Melee profile** or **Ranged profile**. Each profile has its own complete set of controls. The right pane contains only the two reticle previews; scroll to see the full second preview. They show your draft without requiring a weapon or target. Choose **Save changes** to apply your designs.
+
+**Profile selection** offers `AUTO`, `MELEE` and `RANGED`. AUTO uses the game's primary attack `Ranged` tag to select the ranged profile; other items and empty hands use melee. The other choices lock a profile, which is useful with weapons from other mods. Turning off **Use custom profile** restores the game reticle for that profile. Turning off **Custom reticle** restores the game reticle completely.
+
+Choose from 16 shapes: dot, cross, plus, T cross, diagonal cross, ring, double ring, ring with cross, diamond, diamond with cross, square, brackets, chevron, triangle, hexagon and star. Outlines are continuous and antialiased. The optional center marker has its own color, opacity, size and shape: dot, square, diamond or ring.
+
+The paths below begin with `reticle.melee.` or `reticle.ranged.`. Both profiles support every setting independently.
+
+| Setting | Purpose | Range / choices |
+| --- | --- | --- |
+| `enabled` | Use this custom profile | true / false |
+| `shape` | Main shape | 16 shapes listed above |
+| `color` | Main shape color | Any HEX color |
+| `outlineColor` | Outline color | Any HEX color |
+| `centerColor` | Center marker color | Any HEX color |
+| `size` | Radius for closed shapes and chevrons; diameter for dot | 4–40 |
+| `armLength` | Cross arm length or bracket corner length | 2–32 |
+| `gap` | Cross center gap or spacing between double rings | 0–24 |
+| `thickness` | Main line thickness | 1–8 |
+| `outlineWidth` | Outline thickness; zero removes it | 0–4 |
+| `roundEnds` | Rounded ends on open lines | true / false |
+| `showCenter` | Show the independent center marker | true / false |
+| `centerShape` | Center marker shape | DOT / SQUARE / DIAMOND / RING |
+| `centerSize` | Center marker diameter | 1–12 |
+| `opacity` | Main shape opacity | 0–1 |
+| `outlineOpacity` | Outline opacity, multiplied by its shape opacity | 0–1 |
+| `centerOpacity` | Center marker opacity | 0–1 |
+| `rotation` | Main shape rotation in degrees | 0–359 |
+| `stretchX` / `stretchY` | Main shape proportions, in percent | 50–150 |
+| `offsetX` / `offsetY` | Move the entire reticle from screen center | −24–24 |
+
+Geometry controls apply to the shapes they describe: arm length affects crosses and brackets, while size affects closed shapes, dots and chevrons. The independent center marker stays aligned with the aim point unless you change the reticle offsets. Use zero offsets for a centered aim marker.
+
+Examples:
+
+```text
+/crity set reticle.enabled true
+/crity set reticle.melee.shape chevron
+/crity set reticle.melee.color ffd080
+/crity set reticle.ranged.shape ring_cross
+/crity set reticle.ranged.thickness 2
+/crity set reticle.ranged.centerColor 80ffff
+```
+
+Profiles are saved per player and included in exported appearances. Existing reticle colors and center preferences are migrated automatically. Other combat and HUD settings are preserved. Static geometry is cached, and the HUD only updates when the active design changes. Compatibility checks for weapon selection and the HUD are separate; `/crity diagnostics` reports integration failures.
 
 ## Quick start
 
@@ -62,7 +111,7 @@ Text values can contain spaces. Appearance changes update a visible HUD immediat
 
 ## Sharing an appearance
 
-`/crity export <name>` writes your current saved appearance (colors, rules, HUD, highlight - not your damage/health display modes) to a server-wide `crity_exports/<name>.json` file; names are 1-32 letters, digits, `_` or `-` and are shared across all players, so pick something distinctive if you don't want to overwrite someone else's. `/crity import <name>` reads it back through the exact same strict validation as the main config file, applies it, and saves - a corrupt or hand-edited export is rejected with an error and changes nothing. `/crity exports` lists what is available. This is the way to carry a look between characters or servers, or to hand someone else your color scheme.
+`/crity export <name>` writes your current saved appearance (colors, rules, HUD, highlight and reticles - not your damage/health display modes) to a server-wide `crity_exports/<name>.json` file; names are 1-32 letters, digits, `_` or `-` and are shared across all players, so pick something distinctive if you don't want to overwrite someone else's. `/crity import <name>` reads it back through the exact same strict validation as the main config file, applies it, and saves - a corrupt or hand-edited export is rejected with an error and changes nothing. `/crity exports` lists what is available. This is the way to carry a look between characters or servers, or to hand someone else your color scheme.
 
 ## Damage settings
 

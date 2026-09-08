@@ -7,9 +7,14 @@ import java.util.Locale
 object VisualSettingsEditor {
     fun set(settings: VisualSettings, path: String, input: String): VisualSettings {
         val parts = path.split('.')
-        require(parts.size == 2 && parts[0] in setOf("damage", "hud", "hitboxes")) { "Use damage.<setting>, hud.<setting> or hitboxes.<setting>." }
+        require(parts.size == 2 && parts[0] in setOf("damage", "hud", "hitboxes", "reticle") ||
+            parts.size == 3 && parts[0] == "reticle" && parts[1] in setOf("melee", "ranged")) {
+            "Use section.setting or reticle.melee.setting / reticle.ranged.setting."
+        }
         val root = VisualSettingsCodec.encode(settings)
-        setField(root.getAsJsonObject(parts[0]), parts[1], input)
+        var target = root
+        for (key in parts.dropLast(1)) target = target.getAsJsonObject(key)
+        setField(target, parts.last(), input)
         return VisualSettingsCodec.decode(root)
     }
 
@@ -54,7 +59,7 @@ object VisualSettingsEditor {
             })
             primitive.isNumber -> JsonPrimitive(input.toBigDecimalOrNull() ?: throw IllegalArgumentException("Enter a finite number."))
             key.endsWith("color", ignoreCase = true) -> JsonPrimitive(normalizeColor(input))
-            key in setOf("position", "style", "mode", "orientation") -> JsonPrimitive(input.uppercase(Locale.ROOT).replace('-', '_'))
+            key in setOf("position", "style", "mode", "orientation", "shape", "centerShape") -> JsonPrimitive(input.uppercase(Locale.ROOT).replace('-', '_'))
             else -> JsonPrimitive(if (input == "-") "" else input)
         }
         target.add(key, value)

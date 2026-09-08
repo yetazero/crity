@@ -37,15 +37,16 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
     private var previousPreview: PreviewState? = null
     private var previewTask: ScheduledFuture<*>? = null
     private var closed = false
+    private var editRangedReticle = false
     private val invalid = mutableSetOf<String>()
 
     override fun build(ref: Ref<EntityStore>, commands: UICommandBuilder, events: UIEventBuilder, store: Store<EntityStore>) {
         previousPreview = null
         commands.append("Crity/Settings.ui")
-        for ((selector, value) in listOf("DamageTab" to "DAMAGE", "RulesTab" to "RULES", "HudTab" to "HUD", "HighlightTab" to "HIGHLIGHT")) {
+        for ((selector, value) in listOf("DamageTab" to "DAMAGE", "RulesTab" to "RULES", "HudTab" to "HUD", "HighlightTab" to "HIGHLIGHT", "ReticleTab" to "RETICLE")) {
             SettingsPanelRenderer.action(events, "#$selector", "tab", value)
         }
-        for (action in listOf("Save", "Close", "Reset", "Reload", "EditHud", "EditorBack", "RuleUp", "RuleDown", "RuleDelete", "Step", "Dock")) {
+        for (action in listOf("Save", "Close", "Reset", "Reload", "EditHud", "EditorBack", "RuleUp", "RuleDown", "RuleDelete", "Step", "Dock", "ReticleMelee", "ReticleRanged")) {
             SettingsPanelRenderer.action(events, "#$action", action)
         }
         for (direction in listOf("Left", "Right", "Up", "Down")) SettingsPanelRenderer.action(events, "#Move$direction", "move", direction)
@@ -61,7 +62,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
         commands.set("#EditAnchor.Entries", SettingsPanelRenderer.entries(HudPosition.entries.map { it.name }))
         renderFields(commands, events)
         renderEditorFields(commands, events)
-        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview)
+        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview, tab == SettingsTab.RETICLE)
         active.put(playerRef.uuid, this)
     }
 
@@ -135,6 +136,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
                     status("Saved settings loaded.")
                 }
                 "Save" -> save(ref, store)
+                "ReticleMelee", "ReticleRanged" -> { editRangedReticle = data.action == "ReticleRanged"; refreshFields() }
                 "Close" -> dismiss()
                 "EditHud" -> editor(true)
                 "EditorBack" -> editor(false)
@@ -199,7 +201,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
     private fun renderFields(commands: UICommandBuilder, events: UIEventBuilder) {
         epoch++
         invalid.clear()
-        SettingsPanelRenderer.fields(draft, tab, selectedRule, epoch, commands, events)
+        SettingsPanelRenderer.fields(draft, tab, selectedRule, epoch, commands, events, editRangedReticle)
     }
 
     private fun renderEditorFields(commands: UICommandBuilder, events: UIEventBuilder) {
@@ -214,6 +216,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
         val commands = UICommandBuilder()
         val events = UIEventBuilder()
         renderFields(commands, events)
+        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview, tab == SettingsTab.RETICLE)
         commands.set("#Save.Disabled", !draft.dirty)
         commands.set("#Status.Text", if (draft.dirty) "Unsaved changes. Save to apply." else "Your saved settings.")
         sendUpdate(commands, events, false)
@@ -234,6 +237,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
             SettingsTab.DAMAGE -> SettingsFields.modes + SettingsFields.damage
             SettingsTab.HUD -> SettingsFields.hud
             SettingsTab.HIGHLIGHT -> SettingsFields.highlight
+            SettingsTab.RETICLE -> SettingsFields.reticleFor(editRangedReticle)
             else -> emptyList()
         }
         val index = fields.indexOfFirst { it.path == path }
@@ -271,14 +275,14 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
         previewTask?.cancel(false)
         previewTask = null
         val commands = UICommandBuilder()
-        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview)
+        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview, tab == SettingsTab.RETICLE)
         sendUpdate(commands)
     }
 
     private fun editor(show: Boolean) {
         fullScreen = show
         val commands = UICommandBuilder().set("#Window.Visible", !show).set("#Overlay.Visible", !show).set("#Editor.Visible", show)
-        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview)
+        previousPreview = SettingsPanelRenderer.preview(draft, sample, fullScreen, commands, previousPreview, tab == SettingsTab.RETICLE)
         sendUpdate(commands)
         if (show) refreshEditor() else refreshFields()
     }

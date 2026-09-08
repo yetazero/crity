@@ -1,8 +1,8 @@
 {
   "Group": "yetazero",
   "Name": "Crity",
-  "Version": "3.2.4",
-  "Description": "Native combat appearance settings, customizable damage text, target HUD and highlight",
+  "Version": "3.4.2",
+  "Description": "Customizable damage text, target HUD, combat highlights and independent melee and ranged reticles with native appearance settings",
   "Authors": [
     {
       "Name": "yetazero"

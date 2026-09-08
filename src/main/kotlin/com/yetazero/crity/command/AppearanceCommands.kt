@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture
 
 internal object AppearanceCommands {
     fun register(parent: AbstractCommand) {
-        parent.addSubCommand(object : AbstractCommand("set", "Set any damage or HUD appearance setting") {
+        parent.addSubCommand(object : AbstractCommand("set", "Set any combat appearance setting") {
             private val path = withRequiredArg("setting", "For example hud.position or damage.decimals", ArgTypes.STRING)
             private val value = withRequiredArg("value", "New value; text can include spaces", ArgTypes.GREEDY_STRING)
             init { requireNoPermission() }
@@ -69,11 +69,14 @@ internal object AppearanceCommands {
             override fun execute(ctx: CommandContext): CompletableFuture<Void> {
                 val ref = player(ctx) ?: return CompletableFuture.completedFuture(null)
                 val json = VisualSettingsCodec.encode(CrityState.getSettings(ref.uuid).visual)
-                for (section in listOf("damage", "hud", "hitboxes")) {
-                    for ((key, value) in json.getAsJsonObject(section).entrySet()) {
-                        if (value.isJsonPrimitive) ctx.sendMessage(Message.raw("$section.$key = ${value.asString}"))
+                fun listSettings(value: com.google.gson.JsonObject, prefix: String = "") {
+                    for ((key, field) in value.entrySet()) {
+                        val path = if (prefix.isEmpty()) key else "$prefix.$key"
+                        if (field.isJsonPrimitive) ctx.sendMessage(Message.raw("$path = ${field.asString}"))
+                        else if (field.isJsonObject) listSettings(field.asJsonObject, path)
                     }
                 }
+                listSettings(json)
                 CrityState.getSettings(ref.uuid).visual.damage.rules.forEachIndexed { index, rule ->
                     ctx.sendMessage(Message.raw("Rule ${index + 1}: ${rule.id} enabled=${rule.enabled} ${rule.color}, minPercent=${rule.minPercent}, amount=${rule.minAmount}..${rule.maxAmount}, cause=${rule.cause}, weapon=${rule.weaponPrefix}, text=${rule.format}"))
                 }

@@ -15,8 +15,7 @@ $C.@DecoratedContainer #Window {
       $C.@SecondaryTextButton #RulesTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Color rules"; }
       $C.@SecondaryTextButton #HudTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Health HUD"; }
       $C.@SecondaryTextButton #HighlightTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Highlight"; }
-      Group { FlexWeight: 1; }
-      $C.@TextButton #EditHud { @Anchor = Anchor(Width: 160); Text: "Place HUD"; }
+      $C.@SecondaryTextButton #ReticleTab { @Anchor = Anchor(Width: 145, Right: 6); Text: "Reticle"; }
     }
     Group {
       FlexWeight: 1;
@@ -27,6 +26,12 @@ $C.@DecoratedContainer #Window {
         Anchor: (Right: 18);
         Label #SectionTitle { Anchor: (Height: 28); Style: (FontSize: 19, TextColor: #e9d8ab, RenderBold: true); }
         Label #SectionHint { Anchor: (Height: 44, Bottom: 8); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+        Group #HudTools {
+          Visible: false;
+          LayoutMode: Left;
+          Anchor: (Height: 44, Bottom: 8);
+          $C.@TextButton #EditHud { @Anchor = Anchor(Width: 160); Text: "Place HUD"; }
+        }
         Group #RuleTools {
           Visible: false;
           LayoutMode: Top;
@@ -46,6 +51,13 @@ $C.@DecoratedContainer #Window {
             $C.@SecondaryTextButton #RuleAdd { @Anchor = Anchor(Width: 145); Text: "Add rule"; }
           }
         }
+        Group #ReticleProfileTools {
+          Visible: false;
+          LayoutMode: Left;
+          Anchor: (Height: 44, Bottom: 8);
+          $C.@SecondaryTextButton #ReticleMelee { @Anchor = Anchor(Width: 160, Right: 8); Text: "Melee profile"; }
+          $C.@SecondaryTextButton #ReticleRanged { @Anchor = Anchor(Width: 160); Text: "Ranged profile"; }
+        }
         Group #Fields {
           FlexWeight: 1;
           LayoutMode: TopScrolling;
@@ -59,6 +71,28 @@ $C.@DecoratedContainer #Window {
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
         Padding: (Right: 8);
         Label { Text: "PREVIEW"; Anchor: (Height: 28); Style: (FontSize: 15, TextColor: #e9d8ab, RenderBold: true); }
+        Group #ReticlePreviewPanel {
+          Visible: false;
+          LayoutMode: Top;
+          Anchor: (Height: 648);
+          Label { Text: "MELEE"; Anchor: (Height: 28); Style: (FontSize: 14, TextColor: #e9d8ab, RenderBold: true); }
+          Group #MeleeReticlePreview {
+            Anchor: (Height: 256, Bottom: 12);
+            LayoutMode: CenterMiddle;
+            Background: (TexturePath: "../Common/ContainerPanelPatch.png", Border: 4);
+            HitTestVisible: false;
+          }
+          Label { Text: "RANGED"; Anchor: (Height: 28); Style: (FontSize: 14, TextColor: #e9d8ab, RenderBold: true); }
+          Group #RangedReticlePreview {
+            Anchor: (Height: 256, Bottom: 12);
+            LayoutMode: CenterMiddle;
+            Background: (TexturePath: "../Common/ContainerPanelPatch.png", Border: 4);
+            HitTestVisible: false;
+          }
+          Label #ReticlePreviewNote { Anchor: (Height: 56); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+        }
+        Group #CombatPreview {
+          LayoutMode: Top;
         Group {
           Anchor: (Height: 195, Bottom: 8);
           Background: (TexturePath: "../Common/ContainerPanelPatch.png", Border: 4);
@@ -96,6 +130,7 @@ $C.@DecoratedContainer #Window {
         $C.@TextField #SampleCause { @Anchor = Anchor(Bottom: 8); PlaceholderText: "Sample cause (optional)"; }
         $C.@TextField #SampleWeapon { @Anchor = Anchor(Bottom: 8); PlaceholderText: "Sample weapon ID (optional)"; }
         Label { Text: "Samples use your draft. Save applies changes to combat."; Anchor: (Height: 42); Style: (FontSize: 12, TextColor: #96a9be, Wrap: true); }
+        }
       }
     }
     Label #Status { Anchor: (Height: 30, Top: 8); Style: (FontSize: 13, TextColor: #b7cedd, VerticalAlignment: Center); Text: "Your settings. Changes stay in this panel until saved."; }

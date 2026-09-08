@@ -29,9 +29,11 @@ fun checkSettingsPanel() {
     val base = CrityState.PlayerSettings()
     val original = SettingsSnapshot(base)
     val draft = SettingsDraft(original)
-    val paths = VisualSettingsCodec.encode(base.visual).entrySet().flatMap { (section, value) ->
-        value.asJsonObject.entrySet().filter { it.value.isJsonPrimitive }.map { "$section.${it.key}" }
-    }.toSet()
+    fun primitivePaths(value: com.google.gson.JsonObject, prefix: String = ""): List<String> = value.entrySet().flatMap { (key, field) ->
+        val path = if (prefix.isEmpty()) key else "$prefix.$key"
+        when { field.isJsonPrimitive -> listOf(path); field.isJsonObject -> primitivePaths(field.asJsonObject, path); else -> emptyList() }
+    }
+    val paths = primitivePaths(VisualSettingsCodec.encode(base.visual)).toSet()
     check(paths == SettingsFields.all.map { it.path }.filter { '.' in it }.toSet())
     check(SettingsFields.byPath.size == SettingsFields.all.size)
     for (field in SettingsFields.all) draft.field(field.path, draft.value(field.path))
@@ -72,10 +74,10 @@ fun checkSettingsPanel() {
         val event = checkNotNull(SettingsPageData.CODEC.decode(BsonDocument.parse(payload), ExtraInfo.THREAD_LOCAL.get()))
         check(event.value() == expected)
     }
-    for (tab in SettingsTab.entries) {
+    for ((tab, ranged) in SettingsTab.entries.flatMap { tab -> (if (tab == SettingsTab.RETICLE) listOf(false, true) else listOf(false)).map { tab to it } }) {
         val commands = UICommandBuilder()
         val events = UIEventBuilder()
-        SettingsPanelRenderer.fields(draft, tab, "critical", 7, commands, events)
+        SettingsPanelRenderer.fields(draft, tab, "critical", 7, commands, events, ranged)
         checkClientCommands(commands)
         check(events.events.isNotEmpty() && events.events.size <= 64)
         check(commands.commands.size <= 300)
