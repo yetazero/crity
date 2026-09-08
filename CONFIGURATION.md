@@ -12,7 +12,7 @@ Run `/crity` to open the native Hytale settings window. `/crity help` lists the 
 - **Reticle:** edit separate melee and ranged profiles with two dedicated reticle previews. Choose a shape and customize its geometry, center marker, colors, outline and position.
 - **Highlight:** enable glow or diagnostic bounds, change color/brightness/thickness and bounds limits.
 
-The right pane shows a static game portrait, a damage sample, the health HUD sample, rule colors and current modes. Change the sample amount, ratio, cause or weapon to try your rules. Floating-text motion and target glow are visible during combat.
+The preview pane follows the selected tab. **Reticle** shows separate melee and ranged designs without a target portrait; scroll to see the second preview. The other tabs show a static game portrait, a damage sample, the health HUD sample, rule colors and current modes. Change the sample amount, ratio, cause or weapon to try your rules. Floating-text motion and target glow are visible during combat.
 
 **Place HUD**, in the **Health HUD** tab, opens a full-screen sample at its actual size. Choose one of nine screen anchors, adjust horizontal/vertical sliders or type precise offsets, and use direction buttons for 1/8/32-unit nudges. **Move controls** switches the control panel between the top and bottom. **Back to settings** keeps the draft. Placement uses native controls, not mouse dragging of the bar.
 

@@ -32,23 +32,29 @@ Crity supports **Hytale 0.7.0-PRE1**. Check the game version listed on the relea
 3. Place the JAR in its Hytale `Mods` folder. When updating, replace the previous Crity JAR so only one version is installed.
 4. Start the world or server and enter `/crity`.
 
-## Make it yours
+## Customize in game
 
-Use the settings panel to edit **Damage**, **Color rules**, **Health HUD**, **Highlight**, and **Reticle**.
-Choose **Place HUD** to adjust the health bar on screen, then **Save changes** to apply your settings.
-Closing the panel without saving discards your edits.
+Enter `/crity` to open your settings. Each player can create and save their own appearance.
 
-| Command | Action |
+| Tab | What you can customize |
 | --- | --- |
-| `/crity` | Open the settings panel |
-| `/crity help` | List available commands |
-| `/crity highlight on` | Enable target highlighting |
-| `/crity export <name>` | Save an appearance to a shared server slot |
-| `/crity import <name>` | Apply a shared appearance |
-| `/crity exports` | List shared appearances |
-| `/crity reset` | Reset your appearance to server defaults |
+| **Damage** | Custom, vanilla or hidden damage numbers and target health; critical text, number precision, spread and fallback color/text |
+| **Color rules** | Colors and labels for different hits, damage ranges, damage types, weapon filters and rule priority |
+| **Health HUD** | Bar style, horizontal or vertical layout, dimensions, colors, text, damage trail and time on screen |
+| **Highlight** | Target glow color, brightness and thickness, or diagnostic bounding boxes |
+| **Reticle** | Independent melee and ranged designs, with shape, outline, center marker, colors, opacity, size, rotation and offsets |
 
-See the [configuration guide](CONFIGURATION.md) for every setting, command, and customization example.
+**Set up your reticles.** Open **Reticle** and enable **Custom reticle**. Select **Melee profile** or **Ranged profile** to edit that design. The preview pane shows both reticles without a target model; scroll to see the second preview. **Profile selection → AUTO** switches profiles with your weapon. Choose **MELEE** or **RANGED** to keep one profile active. Turn off **Use custom profile** to use the game's reticle for that profile.
+
+**Position your health HUD.** In **Health HUD**, choose **Place HUD** to open a full-screen sample. Pick a screen anchor, adjust the offsets or use the direction buttons, then choose **Back to settings** to continue editing.
+
+**Apply your changes.** Previews show your draft. Select **Save changes** to apply and save it. **Reload saved** restores your saved settings; **Defaults** loads the server's default appearance into the draft. Closing the panel without saving discards unsaved edits.
+
+## Share your appearance
+
+Save your settings in the panel, then use `/crity export <name>` to share your damage, HUD, highlight and reticle appearance on the server. Other players can apply it with `/crity import <name>`. Use `/crity exports` to see the available names.
+
+The [configuration guide](CONFIGURATION.md) covers every setting and command, including direct reticle commands. `/crity help` lists commands in game; `/crity diagnostics` reports feature availability for troubleshooting.
 
 ## Support
 
