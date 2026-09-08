@@ -3,7 +3,15 @@
 Customizable damage numbers, a target health HUD, combat highlights, and custom reticles for Hytale.
 Choose your colors, create damage rules, and place the HUD where it suits your playstyle.
 
-[Download](https://github.com/yetazero/crity/releases/latest) · [Configuration guide](CONFIGURATION.md) · [Report an issue](https://github.com/yetazero/crity/issues)
+[Download](https://github.com/yetazero/crity/releases/latest) · [Configuration guide](CONFIGURATION.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/yetazero/crity/issues)
+
+## New in 3.4.2
+
+Create separate melee and ranged reticles with 16 shapes, independent center markers,
+and precise color, outline, size and position controls. Open `/crity` → **Reticle**
+to preview both designs and save your settings.
+
+[See all changes](CHANGELOG.md) · [Download for Hytale 0.7.0-PRE1](https://github.com/yetazero/crity/releases/tag/Crity0.7.0-PRE1-v3)
 
 ## Features
 

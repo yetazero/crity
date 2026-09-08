@@ -66,6 +66,7 @@ The tagged source must include the Gradle wrapper and build configuration.
 | `Crity0.6.0` | 2.9.1 | 0.6.0 |
 | `Crity0.7.0-PRE1` | 2.9.8 | 0.7.0-pre.1 |
 | `Crity0.7.0-PRE1-v2` | 3.2.4 | 0.7.0-pre.1 |
+| `Crity0.7.0-PRE1-v3` | 3.4.2 | 0.7.0-pre.1 |
 
 The legacy 2.9.1 source does not include the Gradle wrapper and requires its
 matching Hytale 0.6.0 API. It cannot use the current publishing workflow.

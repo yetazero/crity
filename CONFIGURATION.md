@@ -51,7 +51,7 @@ The paths below begin with `reticle.melee.` or `reticle.ranged.`. Both profiles 
 | `stretchX` / `stretchY` | Main shape proportions, in percent | 50–150 |
 | `offsetX` / `offsetY` | Move the entire reticle from screen center | −24–24 |
 
-Geometry controls apply to the shapes they describe: arm length affects crosses and brackets, while size affects closed shapes, dots and chevrons. The independent center marker stays aligned with the aim point unless you change the reticle offsets. Use zero offsets for a centered aim marker.
+Geometry controls apply to the shapes they describe: arm length affects crosses and brackets, while size affects closed shapes, dots and chevrons. The independent center marker stays aligned with the aim point unless you change the reticle offsets. Use zero offsets for a centered aim marker. The chevron tip stays at the aim point as its size and rotation change.
 
 Examples:
 

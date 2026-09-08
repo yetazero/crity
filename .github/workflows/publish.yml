@@ -6,7 +6,7 @@ on:
       tag:
         description: Existing release tag to build (create a draft Release first)
         required: true
-        default: Crity0.7.0-PRE1-v2
+        default: Crity0.7.0-PRE1-v3
 
 permissions:
   contents: write
