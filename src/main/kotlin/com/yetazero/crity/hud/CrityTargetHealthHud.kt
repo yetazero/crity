@@ -116,7 +116,7 @@ class CrityTargetHealthHud(
 
     private fun scheduleTick(expectedGeneration: Long, delayMillis: Long) {
         if (!closed) {
-            task = world.scheduleAfter({ tick(expectedGeneration) }, delayMillis, TimeUnit.MILLISECONDS)
+            task = com.yetazero.crity.compat.WorldTimer.after(world, { tick(expectedGeneration) }, delayMillis, TimeUnit.MILLISECONDS)
         }
     }
 

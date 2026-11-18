@@ -263,7 +263,7 @@ internal class CritySettingsPage(playerRef: PlayerRef, private val world: World)
 
     private fun requestPreview() {
         if (closed || previewTask != null) return
-        previewTask = world.scheduleAfter({
+        previewTask = com.yetazero.crity.compat.WorldTimer.after(world, {
             previewTask = null
             if (isCurrent()) {
                 try { previewNow() } catch (e: LinkageError) { fail(e) } catch (e: Exception) { fail(e) }

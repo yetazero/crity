@@ -99,7 +99,7 @@ internal object NativeTargetHighlight {
             val asset = checkNotNull(map.getAsset(id))
             if (lastAppearance != settings || lastAsset !== asset) {
                 val vfx = customize(asset.toPacket(), settings)
-                player.packetHandler.write(UpdateModelvfxs(UpdateType.AddOrUpdate, map.nextIndex, mapOf(id to vfx)))
+                player.packetHandler.write(modelVfxPacket(map.nextIndex, mapOf(id to vfx)))
                 lastAppearance = settings
                 lastAsset = asset
             }
@@ -107,7 +107,7 @@ internal object NativeTargetHighlight {
         }
 
         fun schedule() {
-            task = world.scheduleAfter({ tick() }, 100L, TimeUnit.MILLISECONDS)
+            task = WorldTimer.after(world, { tick() }, 100L, TimeUnit.MILLISECONDS)
         }
 
         private fun viewer(): EntityViewer? {
@@ -163,4 +163,16 @@ internal object NativeTargetHighlight {
             }
         }
     }
+}
+
+/**
+ * The packet that carries a model effect. Update 8 dropped its middle constructor argument (the next free index), so the constructor
+ * that exists on the running server is the one used.
+ */
+private fun modelVfxPacket(nextIndex: Int, effects: Map<Int, com.hypixel.hytale.protocol.ModelVFX>): UpdateModelvfxs {
+    val constructors = UpdateModelvfxs::class.java.constructors
+    constructors.firstOrNull { it.parameterCount == 2 && it.parameterTypes[0] == UpdateType::class.java }
+        ?.let { return it.newInstance(UpdateType.AddOrUpdate, effects) as UpdateModelvfxs }
+    val old = constructors.first { it.parameterCount == 3 && it.parameterTypes[0] == UpdateType::class.java }
+    return old.newInstance(UpdateType.AddOrUpdate, nextIndex, effects) as UpdateModelvfxs
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.4.3 — Hytale 0.8.0 compatibility
+
+### Fixed
+
+- The target health bar no longer stays on screen and stops updating on Hytale 0.8.0-pre.5. The game removed `World.scheduleAfter`, which the health bar, the target highlight and the settings preview used for their timers; the module switched itself off after the first hit and left the last bar behind.
+- The target highlight packet works with the new `UpdateModelvfxs` constructor.
+
+### Improved
+
+- Timers use the server's own scheduler when `World.scheduleAfter` is not available, and the old call when it is, so one JAR works on both.
+
 ## 3.4.2 — Custom reticles
 
 Hytale 0.7.0-PRE1 · [Download](https://github.com/yetazero/crity/releases/tag/Crity0.7.0-PRE1-v3)
