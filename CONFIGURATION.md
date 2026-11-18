@@ -1,6 +1,6 @@
 # Crity configuration reference
 
-Settings, commands, and customization examples for Crity 3.4.2 on Hytale 0.7.0-PRE1.
+Settings, commands, and customization examples for Crity 3.4.3 on Hytale 0.8.0-PRE5.
 
 ## Settings panel
 

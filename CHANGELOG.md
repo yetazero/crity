@@ -1,10 +1,12 @@
 # Changelog
 
-## 3.4.3 — Hytale 0.8.0 compatibility
+## 3.4.3 — Hytale 0.8.0-PRE5 compatibility
+
+Hytale 0.8.0-PRE5 · [Download](https://github.com/yetazero/crity/releases/tag/Crity0.8.0-PRE5)
 
 ### Fixed
 
-- The target health bar no longer stays on screen and stops updating on Hytale 0.8.0-pre.5. The game removed `World.scheduleAfter`, which the health bar, the target highlight and the settings preview used for their timers; the module switched itself off after the first hit and left the last bar behind.
+- The target health bar no longer stays on screen and stops updating on Hytale 0.8.0-PRE5. The game removed `World.scheduleAfter`, which the health bar, the target highlight and the settings preview used for their timers; the module switched itself off after the first hit and left the last bar behind.
 - The target highlight packet works with the new `UpdateModelvfxs` constructor.
 
 ### Improved

@@ -5,13 +5,12 @@ Choose your colors, create damage rules, and place the HUD where it suits your p
 
 [Download](https://github.com/yetazero/crity/releases/latest) · [Configuration guide](CONFIGURATION.md) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/yetazero/crity/issues)
 
-## New in 3.4.2
+## New in 3.4.3
 
-Create separate melee and ranged reticles with 16 shapes, independent center markers,
-and precise color, outline, size and position controls. Open `/crity` → **Reticle**
-to preview both designs and save your settings.
+Compatibility with Hytale 0.8.0-PRE5. The target health bar and the target highlight keep
+working after the first hit, and the health bar disappears when its time is up.
 
-[See all changes](CHANGELOG.md) · [Download for Hytale 0.7.0-PRE1](https://github.com/yetazero/crity/releases/tag/Crity0.7.0-PRE1-v3)
+[See all changes](CHANGELOG.md) · [Download for Hytale 0.8.0-PRE5](https://github.com/yetazero/crity/releases/tag/Crity0.8.0-PRE5)
 
 ## Features
 
@@ -25,7 +24,7 @@ to preview both designs and save your settings.
 
 ## Installation
 
-Crity supports **Hytale 0.7.0-PRE1**. Check the game version listed on the release before downloading.
+Crity supports **Hytale 0.8.0-PRE5**. Check the game version listed on the release before downloading.
 
 1. Download the Crity JAR for your game version from [Releases](https://github.com/yetazero/crity/releases/latest).
 2. Stop your world or server.

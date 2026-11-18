@@ -9,7 +9,7 @@ To install the mod, download a JAR from [Releases](https://github.com/yetazero/c
 - Network access to download Gradle, Kotlin, and the Hytale server API.
 
 The Gradle wrapper pins Gradle 9.7.1 and verifies its distribution checksum.
-The build uses Hytale's official Maven repository with API version `0.7.0-pre.1`.
+The build uses Hytale's official Maven repository with API version `0.8.0-pre.5`.
 
 ## Build and check
 
@@ -67,6 +67,7 @@ The tagged source must include the Gradle wrapper and build configuration.
 | `Crity0.7.0-PRE1` | 2.9.8 | 0.7.0-pre.1 |
 | `Crity0.7.0-PRE1-v2` | 3.2.4 | 0.7.0-pre.1 |
 | `Crity0.7.0-PRE1-v3` | 3.4.2 | 0.7.0-pre.1 |
+| `Crity0.8.0-PRE5` | 3.4.3 | 0.8.0-pre.5 |
 
 The legacy 2.9.1 source does not include the Gradle wrapper and requires its
 matching Hytale 0.6.0 API. It cannot use the current publishing workflow.

@@ -21,7 +21,7 @@ val hytaleApi: Any = if (hytaleServerJar.isPresent) {
     require(jar.isFile) { "Hytale server JAR does not exist: $jar" }
     files(jar)
 } else {
-    "com.hypixel.hytale:Server:0.7.0-pre.1"
+    "com.hypixel.hytale:Server:0.8.0-pre.5"
 }
 
 dependencies {
